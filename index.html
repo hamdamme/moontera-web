@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moontera LLC</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap">
+        <div class="brand">
+          <div class="logo">M</div>
+          <div>
+            <div class="name">Moontera LLC</div>
+            <div class="tag">Logistics & Transportation</div>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <a href="#services">Services</a>
+          <a href="#about">About</a>
+          <a class="btn" href="#contact">Request a Quote</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="wrap hero-grid">
+          <div>
+            <h1>Reliable trucking and logistics support for your freight.</h1>
+            <p>
+              We help shippers and partners move loads safely and on time, with clear communication from pickup to delivery.
+            </p>
+            <div class="cta">
+              <a class="btn big" href="#contact">Request a Quote</a>
+              <a class="ghost" href="tel:+17738825595">Call: (773) 882-5595</a>
+            </div>
+            <div class="meta">
+              <span>DOT: 4379183</span>
+              <span>MC: 1716328</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Quick Contact</h2>
+            <p class="small">Send a message and we’ll respond as soon as possible.</p>
+
+            <div class="contact-box">
+              <div><strong>Phone:</strong> <a href="tel:+17738825595">(773) 882-5595</a></div>
+              <div><strong>Email:</strong> <a href="mailto:moontera058@gmail.com">moontera058@gmail.com</a></div>
+              <div><strong>Location:</strong> Buffalo Grove, IL</div>
+            </div>
+
+            <a class="btn full" href="#contact">Request a Quote</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="services" class="section">
+        <div class="wrap">
+          <h2>Services</h2>
+          <div class="grid3">
+            <div class="box">
+              <h3>Freight Transport</h3>
+              <p>Dependable pickup and delivery with proactive updates.</p>
+            </div>
+            <div class="box">
+              <h3>Dispatch Support</h3>
+              <p>Coordination, scheduling, and communication to keep things moving.</p>
+            </div>
+            <div class="box">
+              <h3>Partner Loads</h3>
+              <p>Working with brokers and shippers for consistent capacity.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="about" class="section alt">
+        <div class="wrap">
+          <h2>About Moontera LLC</h2>
+          <p>
+            Moontera LLC is a transportation business based in Buffalo Grove, Illinois. Our focus is safe delivery,
+            clear communication, and reliable service.
+          </p>
+        </div>
+      </section>
+
+      <section id="contact" class="section">
+        <div class="wrap">
+          <h2>Request a Quote</h2>
+          <p class="small">
+            This form can be connected to Netlify Forms next. For now, you can call or email us.
+          </p>
+
+          <div class="grid2">
+            <div class="box">
+              <h3>Call or Email</h3>
+              <p><strong>Phone:</strong> <a href="tel:+17738825595">(773) 882-5595</a></p>
+              <p><strong>Email:</strong> <a href="mailto:moontera058@gmail.com">moontera058@gmail.com</a></p>
+              <p><strong>DOT:</strong> 4379183 &nbsp; | &nbsp; <strong>MC:</strong> 1716328</p>
+            </div>
+
+            <form class="box" onsubmit="return false;">
+              <h3>Quote Details (coming next)</h3>
+              <label>
+                Name
+                <input type="text" placeholder="Your name" />
+              </label>
+              <label>
+                Phone / Email
+                <input type="text" placeholder="Best contact" />
+              </label>
+              <label>
+                Message
+                <textarea rows="4" placeholder="Pickup, delivery, dates, equipment..."></textarea>
+              </label>
+              <button class="btn full" type="submit">Submit</button>
+              <p class="tiny">Next step: make this a real Netlify form.</p>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap">
+        <div>© <span id="y"></span> Moontera LLC</div>
+        <div class="small">Buffalo Grove, IL • DOT 4379183 • MC 1716328</div>
+      </div>
+    </footer>
+
+    <script>
+      document.getElementById("y").textContent = new Date().getFullYear();
+    </script>
+  </body>
+</html>
