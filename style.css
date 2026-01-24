@@ -1,16 +1,14 @@
 :root {
-  --bg: #eef2f7;
-  --card: #ffffff;
-  --ink: #111827;
-  --muted: #6b7280;
+  --bg: #181818;        /* true dark gray */
+  --card: #202020;      /* neutral gray card */
+  --ink: #e6e6e6;
+  --muted: #a1a1a1;
   --brand: #38bdf8;
   --brand-2: #22c55e;
-  --line: #e5e7eb;
+  --line: #2a2a2a;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html, body {
   margin: 0;
@@ -25,9 +23,7 @@ a {
   color: var(--brand);
   text-decoration: none;
 }
-a:hover {
-  text-decoration: underline;
-}
+a:hover { text-decoration: underline; }
 
 .wrap {
   max-width: 1100px;
@@ -40,10 +36,11 @@ a:hover {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(248, 250, 252, 0.85);
+  background: rgba(24, 24, 24, 0.9);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
+
 .top .wrap {
   display: flex;
   align-items: center;
@@ -51,6 +48,7 @@ a:hover {
   height: 72px;
 }
 
+/* Branding */
 .brand {
   display: flex;
   gap: 12px;
@@ -64,19 +62,14 @@ a:hover {
   background: linear-gradient(135deg, var(--brand), var(--brand-2));
   display: grid;
   place-items: center;
-  color: #020617;
+  color: #111;
   font-weight: 900;
 }
 
-.name {
-  font-weight: 700;
-}
+.name { font-weight: 700; }
+.tag { font-size: 12px; color: var(--muted); }
 
-.tag {
-  font-size: 12px;
-  color: var(--muted);
-}
-
+/* Nav */
 .nav {
   display: flex;
   gap: 16px;
@@ -85,43 +78,35 @@ a:hover {
 
 .btn {
   background: linear-gradient(135deg, var(--brand), var(--brand-2));
-  color: #020617;
+  color: #111;
   font-weight: 700;
   border-radius: 10px;
   padding: 10px 14px;
   display: inline-block;
-  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25);
 }
-.btn:hover {
-  opacity: 0.9;
-}
-.btn.big {
-  padding: 14px 18px;
-}
-.btn.full {
-  width: 100%;
-  text-align: center;
-}
+.btn:hover { opacity: .9; }
+.btn.big { padding: 14px 18px; }
+.btn.full { width: 100%; text-align: center; }
 
 .ghost {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px 14px;
   color: var(--ink);
-  background: #ffffff;
+  background: var(--card);
 }
 
 /* Hero */
 .hero {
   padding: 64px 0 24px;
   background:
-    radial-gradient(1200px 400px at 20% -10%, #0ea5e933, transparent),
-    radial-gradient(800px 400px at 90% 10%, #22c55e22, transparent);
+    radial-gradient(1200px 400px at 20% -10%, rgba(56,189,248,.12), transparent),
+    radial-gradient(800px 400px at 90% 10%, rgba(34,197,94,.10), transparent);
 }
 
 .hero-grid {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: 1.2fr .8fr;
   gap: 24px;
 }
 
@@ -136,23 +121,9 @@ a:hover {
   max-width: 640px;
 }
 
-.cta {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  margin: 18px 0;
-}
-
-.meta {
-  display: flex;
-  gap: 16px;
-  color: var(--muted);
-  font-size: 14px;
-}
-
 /* Cards */
 .card {
-  background: #ffffff;
+  background: var(--card);
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 18px;
@@ -165,7 +136,7 @@ a:hover {
 }
 
 .section.alt {
-  background: #f9fafb;
+  background: #1d1d1d;
 }
 
 .section h2 {
@@ -173,6 +144,7 @@ a:hover {
   margin-bottom: 18px;
 }
 
+/* Layout */
 .grid3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -193,22 +165,12 @@ a:hover {
   padding: 16px;
 }
 
-.box h3 {
-  margin-top: 0;
-}
+.box h3 { margin-top: 0; }
 
-.contact-box div {
-  margin: 8px 0;
-}
+.contact-box div { margin: 8px 0; }
 
-.small {
-  color: var(--muted);
-}
-
-.tiny {
-  color: var(--muted);
-  font-size: 12px;
-}
+.small { color: var(--muted); }
+.tiny { color: var(--muted); font-size: 12px; }
 
 /* Forms */
 label {
@@ -220,7 +182,7 @@ label {
 input,
 textarea {
   width: 100%;
-  background: #f9fafb;
+  background: #1a1a1a;
   color: var(--ink);
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -232,21 +194,13 @@ textarea {
 .footer {
   border-top: 1px solid var(--line);
   padding: 24px 0;
-  background: #f9fafb;
+  background: #1a1a1a;
 }
 
 /* Responsive */
 @media (max-width: 900px) {
-  .hero-grid {
-    grid-template-columns: 1fr;
-  }
-  .grid3 {
-    grid-template-columns: 1fr;
-  }
-  .grid2 {
-    grid-template-columns: 1fr;
-  }
-  .hero h1 {
-    font-size: 34px;
-  }
+  .hero-grid { grid-template-columns: 1fr; }
+  .grid3 { grid-template-columns: 1fr; }
+  .grid2 { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 34px; }
 }
