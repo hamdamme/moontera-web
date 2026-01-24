@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Driver Application (Test) | Moontera LLC</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap">
+        <div class="brand">
+          <div class="logo">M</div>
+          <div>
+            <div class="name">Moontera LLC</div>
+            <div class="tag">Driver Application (Test)</div>
+          </div>
+        </div>
+        <nav class="nav">
+          <a href="/index.html">Home</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="section">
+        <div class="wrap">
+          <h2>Quick Test Application</h2>
+          <p class="small">Submit once to make the form show up in Netlify → Forms.</p>
+
+          <form name="driver-application" method="POST" data-netlify="true" class="box">
+            <input type="hidden" name="form-name" value="driver-application" />
+
+            <label>
+              Full Name *
+              <input name="full_name" type="text" required />
+            </label>
+
+            <label>
+              Phone *
+              <input name="phone" type="tel" required />
+            </label>
+
+            <label>
+              Email *
+              <input name="email" type="email" required />
+            </label>
+
+            <h3>Clearinghouse Consent</h3>
+            <p class="small">
+              By typing your full name below, you give written consent to Moontera LLC to conduct FMCSA Drug & Alcohol
+              Clearinghouse queries (49 CFR Part 382) for employment eligibility purposes.
+            </p>
+
+            <label>
+              Type Full Name to Authorize *
+              <input name="clearinghouse_consent_signature" type="text" required />
+            </label>
+
+            <button class="btn full" type="submit">Submit Test</button>
+          </form>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
