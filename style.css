@@ -88,6 +88,13 @@ input, textarea {
   padding: 10px; margin-top: 6px;
 }
 
+
+.logo-img {
+  height: 40px;       /* adjust if needed */
+  width: auto;
+  display: block;
+}
+
 .footer {
   border-top: 1px solid var(--line);
   padding: 24px 0; background: #020617;
