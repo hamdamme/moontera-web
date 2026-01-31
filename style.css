@@ -1,10 +1,9 @@
 :root {
-  --bg: #2a2a2a;        /* neutral dark gray */
-  --card: #222222;      /* card gray */
+  --bg: #2a2a2a;
+  --card: #222222;
   --ink: #e5e5e5;
   --muted: #9b9b9b;
 
-  /* brand accents */
   --brand: #ffffff;
   --brand-2: #1f5d82;
 
@@ -22,7 +21,7 @@ html, body {
     Helvetica, Arial, sans-serif;
 }
 
-/* Ensure content is always above background */
+/* Ensure all content is above background */
 body {
   position: relative;
 }
@@ -34,29 +33,28 @@ footer {
   z-index: 2;
 }
 
-/* 🌙 Moon background (safe parallax, never overlaps content) */
+/* 🌙 BACKGROUND MOON — SMALL, LEFT, SUBTLE */
 body::before {
   content: "";
   position: fixed;
-  top: -180px;
-  right: -220px;
-  width: 420px;
-  height: 420px;
+  top: 120px;          /* below navbar */
+  left: -140px;        /* pushed to left */
+  width: 260px;        /* SMALL */
+  height: 260px;
   background: url("assets/moon.png") no-repeat center / contain;
-  opacity: 0.06;          /* subtle */
-  z-index: 0;             /* behind everything */
+  opacity: 0.05;       /* very subtle */
+  z-index: 0;
   pointer-events: none;
-  filter: blur(0.5px);    /* soft edges */
 }
 
-/* Mobile moon adjustments */
+/* Mobile: even smaller */
 @media (max-width: 600px) {
   body::before {
-    width: 280px;
-    height: 280px;
-    top: -140px;
-    right: -160px;
-    opacity: 0.05;
+    width: 180px;
+    height: 180px;
+    left: -110px;
+    top: 100px;
+    opacity: 0.04;
   }
 }
 
@@ -76,7 +74,7 @@ a:hover { text-decoration: underline; }
 .top {
   position: sticky;
   top: 0;
-  z-index: 3; /* above moon */
+  z-index: 3;
   background: rgba(26, 26, 26, 0.92);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
@@ -96,18 +94,16 @@ a:hover { text-decoration: underline; }
   align-items: center;
 }
 
-/* Moon icon in header */
+/* Header moon icon (logo) */
 .moon-icon {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
-/* Disable old M logo */
-.logo {
-  display: none;
-}
+/* Old logo disabled */
+.logo { display: none; }
 
 .name { font-weight: 700; }
 .tag { font-size: 12px; color: var(--muted); }
