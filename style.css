@@ -4,7 +4,7 @@
   --ink: #e5e5e5;
   --muted: #9b9b9b;
 
-  /* neutral gray accents */
+  /* brand accents */
   --brand: #ffffff;
   --brand-2: #1f5d82;
 
@@ -20,6 +20,30 @@ html, body {
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter,
     Helvetica, Arial, sans-serif;
+}
+
+/* 🌙 Moon background (parallax-style, stays while scrolling) */
+body::before {
+  content: "";
+  position: fixed;
+  top: -100px;
+  right: -120px;
+  width: 520px;
+  height: 520px;
+  background: url("assets/moon.png") no-repeat center / contain;
+  opacity: 0.08;          /* subtle */
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Mobile moon sizing */
+@media (max-width: 600px) {
+  body::before {
+    width: 360px;
+    height: 360px;
+    top: -80px;
+    right: -80px;
+  }
 }
 
 a {
@@ -58,6 +82,7 @@ a:hover { text-decoration: underline; }
   align-items: center;
 }
 
+/* Moon icon in header */
 .moon-icon {
   width: 28px;
   height: 28px;
@@ -65,7 +90,7 @@ a:hover { text-decoration: underline; }
   border-radius: 8px;
 }
 
-/* (Old .logo class can stay or be deleted — not used anymore) */
+/* Old logo disabled */
 .logo {
   display: none;
 }
