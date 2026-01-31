@@ -5,8 +5,8 @@
   --muted: #9b9b9b;
 
   /* neutral gray accents */
-  --brand: #bdbdbd;
-  --brand-2: #8f8f8f;
+  --brand: #ffffff;
+  --brand-2: #1f5d82;
 
   --line: #2e2e2e;
 }
@@ -58,12 +58,11 @@ a:hover { text-decoration: underline; }
   align-items: center;
 }
 
-/* MOON ICON (replaces the old "M" box) */
 .moon-icon {
-  width: 40px;
-  height: 40px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 /* (Old .logo class can stay or be deleted — not used anymore) */
