@@ -21,7 +21,7 @@ html, body {
     Helvetica, Arial, sans-serif;
 }
 
-/* Ensure all content is above background */
+/* Keep content above background */
 body {
   position: relative;
 }
@@ -33,27 +33,27 @@ footer {
   z-index: 2;
 }
 
-/* 🌙 BACKGROUND MOON — SMALL, LEFT, SUBTLE */
+/* 🌙 BACKGROUND MOON — CENTERED, SMALL, SUBTLE */
 body::before {
   content: "";
   position: fixed;
-  top: 120px;          /* below navbar */
-  left: -140px;        /* pushed to left */
-  width: 260px;        /* SMALL */
+  top: 140px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
   height: 260px;
   background: url("assets/moon.png") no-repeat center / contain;
-  opacity: 0.05;       /* very subtle */
+  opacity: 0.05;
   z-index: 0;
   pointer-events: none;
 }
 
-/* Mobile: even smaller */
+/* Mobile background moon */
 @media (max-width: 600px) {
   body::before {
     width: 180px;
     height: 180px;
-    left: -110px;
-    top: 100px;
+    top: 120px;
     opacity: 0.04;
   }
 }
@@ -94,16 +94,18 @@ a:hover { text-decoration: underline; }
   align-items: center;
 }
 
-/* Header moon icon (logo) */
+/* HEADER ICON (SMALL & CORRECT) */
 .moon-icon {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
-  border-radius: 6px;
+  flex-shrink: 0;
 }
 
-/* Old logo disabled */
-.logo { display: none; }
+/* Remove old M logo */
+.logo {
+  display: none;
+}
 
 .name { font-weight: 700; }
 .tag { font-size: 12px; color: var(--muted); }
