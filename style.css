@@ -22,27 +22,41 @@ html, body {
     Helvetica, Arial, sans-serif;
 }
 
-/* 🌙 Moon background (parallax-style, stays while scrolling) */
+/* Ensure content is always above background */
+body {
+  position: relative;
+}
+
+header,
+main,
+footer {
+  position: relative;
+  z-index: 2;
+}
+
+/* 🌙 Moon background (safe parallax, never overlaps content) */
 body::before {
   content: "";
   position: fixed;
-  top: -100px;
-  right: -120px;
-  width: 520px;
-  height: 520px;
+  top: -180px;
+  right: -220px;
+  width: 420px;
+  height: 420px;
   background: url("assets/moon.png") no-repeat center / contain;
-  opacity: 0.08;          /* subtle */
-  z-index: -1;
+  opacity: 0.06;          /* subtle */
+  z-index: 0;             /* behind everything */
   pointer-events: none;
+  filter: blur(0.5px);    /* soft edges */
 }
 
-/* Mobile moon sizing */
+/* Mobile moon adjustments */
 @media (max-width: 600px) {
   body::before {
-    width: 360px;
-    height: 360px;
-    top: -80px;
-    right: -80px;
+    width: 280px;
+    height: 280px;
+    top: -140px;
+    right: -160px;
+    opacity: 0.05;
   }
 }
 
@@ -62,7 +76,7 @@ a:hover { text-decoration: underline; }
 .top {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 3; /* above moon */
   background: rgba(26, 26, 26, 0.92);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
@@ -90,7 +104,7 @@ a:hover { text-decoration: underline; }
   border-radius: 8px;
 }
 
-/* Old logo disabled */
+/* Disable old M logo */
 .logo {
   display: none;
 }
@@ -137,17 +151,6 @@ a:hover { text-decoration: underline; }
   display: grid;
   grid-template-columns: 1.2fr .8fr;
   gap: 24px;
-}
-
-.hero h1 {
-  font-size: 42px;
-  line-height: 1.1;
-  margin: 0 0 12px;
-}
-
-.hero p {
-  color: var(--muted);
-  max-width: 640px;
 }
 
 /* Cards */
@@ -231,5 +234,4 @@ textarea {
   .hero-grid { grid-template-columns: 1fr; }
   .grid3 { grid-template-columns: 1fr; }
   .grid2 { grid-template-columns: 1fr; }
-  .hero h1 { font-size: 34px; }
 }
