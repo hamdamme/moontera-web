@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Driver Application | Moontera LLC</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="../style.css" />
   </head>
   <body>
     <header class="top">
@@ -31,12 +31,7 @@
           <p class="small">
             Fill out this application in your browser. After you submit, Moontera LLC will receive it by email.
           </p>
-
-          <!-- Netlify Form -->
-          <form name="driver-application" method="POST" data-netlify="true" class="box">
-            <!-- required hidden field for Netlify -->
-            <input type="hidden" name="form-name" value="driver-application" />
-
+            <form method="POST" action="https://driver.llcmoontera.workers.dev/">
             <h3>Applicant Information</h3>
 
             <label>
