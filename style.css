@@ -21,41 +21,12 @@ html, body {
     Helvetica, Arial, sans-serif;
 }
 
-/* Keep content above background */
-body {
-  position: relative;
-}
+/* Keep content above any background decorations */
+body { position: relative; }
 
-header,
-main,
-footer {
+header, main, footer {
   position: relative;
   z-index: 2;
-}
-
-/* 🌙 BACKGROUND MOON — CENTERED, SMALL, SUBTLE */
-body::before {
-  content: "";
-  position: fixed;
-  top: 140px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 260px;
-  height: 260px;
-  background: url("assets/moon.png") no-repeat center / contain;
-  opacity: 0.05;
-  z-index: 0;
-  pointer-events: none;
-}
-
-/* Mobile background moon */
-@media (max-width: 600px) {
-  body::before {
-    width: 180px;
-    height: 180px;
-    top: 120px;
-    opacity: 0.04;
-  }
 }
 
 a {
@@ -74,7 +45,7 @@ a:hover { text-decoration: underline; }
 .top {
   position: sticky;
   top: 0;
-  z-index: 3;
+  z-index: 10;
   background: rgba(26, 26, 26, 0.92);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
@@ -94,17 +65,11 @@ a:hover { text-decoration: underline; }
   align-items: center;
 }
 
-/* HEADER ICON (SMALL & CORRECT) */
 .moon-icon {
   width: 24px;
   height: 24px;
   object-fit: contain;
   flex-shrink: 0;
-}
-
-/* Remove old M logo */
-.logo {
-  display: none;
 }
 
 .name { font-weight: 700; }
@@ -128,14 +93,6 @@ a:hover { text-decoration: underline; }
 .btn:hover { opacity: .9; }
 .btn.big { padding: 14px 18px; }
 .btn.full { width: 100%; text-align: center; }
-
-.ghost {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px 14px;
-  color: var(--ink);
-  background: var(--card);
-}
 
 /* Hero */
 .hero {
@@ -227,9 +184,36 @@ textarea {
   background: #1c1c1c;
 }
 
+/* ✅ Application page: form + image side-by-side */
+.application-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.image-box {
+  padding: 16px;
+}
+
+.application-image img {
+  width: 100%;
+  max-height: 520px;
+  object-fit: contain;
+  display: block;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .hero-grid { grid-template-columns: 1fr; }
   .grid3 { grid-template-columns: 1fr; }
   .grid2 { grid-template-columns: 1fr; }
+
+  .application-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .application-image img {
+    max-height: 320px;
+  }
 }
