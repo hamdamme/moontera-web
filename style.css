@@ -96,11 +96,17 @@ a:hover { text-decoration: underline; }
 
 /* Hero */
 .hero {
-  padding: 64px 0 24px;
+  position: relative;
+  padding: 96px 0 64px;
   background:
-    radial-gradient(1200px 400px at 20% -10%, rgba(255,255,255,.05), transparent),
-    radial-gradient(800px 400px at 90% 10%, rgba(255,255,255,.03), transparent);
+    linear-gradient(
+      rgba(0, 0, 0, 0.75),
+      rgba(0, 0, 0, 0.75)
+    ),
+    url("assets/truck-bg.png") center right no-repeat;
+  background-size: contain;
 }
+
 
 .hero-grid {
   display: grid;
@@ -215,5 +221,11 @@ textarea {
 
   .application-image img {
     max-height: 320px;
+  }
+}
+@media (max-width: 900px) {
+  .hero {
+    background-position: center;
+    background-size: cover;
   }
 }
