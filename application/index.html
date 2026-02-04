@@ -1,178 +1,136 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Driver Application | Moontera LLC</title>
-    <link rel="stylesheet" href="../style.css" />
-  </head>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Driver Application | Moontera LLC</title>
+  <link rel="stylesheet" href="../style.css" />
+</head>
 
-  <body>
-    <!-- HEADER -->
-    <header class="top">
-      <div class="wrap">
-        <div class="brand">
-          <img src="../assets/moon.png" alt="Moontera LLC logo" class="moon-icon" />
-          <div>
-            <div class="name">Moontera LLC</div>
-            <div class="tag">Driver Application</div>
-          </div>
+<body>
+  <!-- HEADER -->
+  <header class="top">
+    <div class="wrap">
+      <div class="brand">
+        <img src="../assets/moon.png" alt="Moontera LLC logo" class="moon-icon" />
+        <div>
+          <div class="name">Moontera LLC</div>
+          <div class="tag">Driver Application</div>
         </div>
-
-        <nav class="nav">
-          <a href="../index.html">Home</a>
-        </nav>
       </div>
-    </header>
 
-    <main>
-      <section class="section">
-        <div class="wrap">
-          <h2>Driver Application</h2>
-          <p class="small">
-            Fill out this application in your browser. After you submit, Moontera LLC will receive it by email.
-          </p>
-        </div>
+      <nav class="nav">
+        <a href="../index.html">Home</a>
+      </nav>
+    </div>
+  </header>
 
-        <div class="wrap application-layout">
-          <!-- LEFT: FORM -->
-          <div class="application-form">
-            <form name="driver-application" method="POST" data-netlify="true" class="box">
-              <input type="hidden" name="form-name" value="driver-application" />
+  <!-- MAIN -->
+  <main>
+    <section class="section">
+      <div class="wrap">
+        <h2>Driver Application</h2>
+        <p class="small">
+          Fill out this application in your browser. After you submit, Moontera LLC will receive it by email.
+        </p>
+      </div>
 
-              <h3>Applicant Information</h3>
+      <!-- FORM + IMAGE SIDE BY SIDE -->
+      <div class="wrap application-layout">
 
+        <!-- LEFT: FORM -->
+        <div class="application-form">
+          <form name="driver-application" method="POST" data-netlify="true" class="box">
+            <input type="hidden" name="form-name" value="driver-application" />
+
+            <h3>Applicant Information</h3>
+
+            <label>
+              Full Name *
+              <input name="full_name" type="text" required />
+            </label>
+
+            <label>
+              Address *
+              <input name="address" type="text" required />
+            </label>
+
+            <div class="grid2">
               <label>
-                Full Name *
-                <input name="full_name" type="text" required />
+                City / State / Zip *
+                <input name="city_state_zip" type="text" required />
               </label>
 
               <label>
-                Address *
-                <input name="address" type="text" required />
+                Date of Birth *
+                <input name="dob" type="date" required />
               </label>
-
-              <div class="grid2">
-                <label>
-                  City/State/Zip *
-                  <input name="city_state_zip" type="text" required />
-                </label>
-
-                <label>
-                  Date of Birth *
-                  <input name="dob" type="date" required />
-                </label>
-              </div>
-
-              <div class="grid2">
-                <label>
-                  Phone *
-                  <input name="phone" type="tel" required />
-                </label>
-
-                <label>
-                  Email *
-                  <input name="email" type="email" required />
-                </label>
-              </div>
-
-              <h3>Position</h3>
-              <div class="grid2">
-                <label>
-                  Position Applied For
-                  <input name="position" type="text" placeholder="Company Driver, Owner Operator, etc." />
-                </label>
-
-                <label>
-                  Date Available to Start
-                  <input name="start_date" type="date" />
-                </label>
-              </div>
-
-              <h3>Driver’s License Information</h3>
-              <div class="grid2">
-                <label>
-                  License Number *
-                  <input name="license_number" type="text" required />
-                </label>
-
-                <label>
-                  State *
-                  <input name="license_state" type="text" required />
-                </label>
-              </div>
-
-              <div class="grid2">
-                <label>
-                  Class
-                  <input name="license_class" type="text" placeholder="A / B / C" />
-                </label>
-
-                <label>
-                  Endorsements
-                  <input name="endorsements" type="text" placeholder="Hazmat, Tanker, etc." />
-                </label>
-              </div>
-
-              <label>
-                License Expiration Date
-                <input name="license_expiration" type="date" />
-              </label>
-
-              <h3>Medical Card Information</h3>
-              <div class="grid2">
-                <label>
-                  Registration Date
-                  <input name="medcard_registration" type="date" />
-                </label>
-
-                <label>
-                  Expiration Date
-                  <input name="medcard_expiration" type="date" />
-                </label>
-              </div>
-
-              <label>
-                Date of last DOT Regulated Drug or Alcohol test collected
-                <input name="last_dot_test_date" type="date" />
-              </label>
-
-              <h3>FMCSA Drug & Alcohol Clearinghouse Consent</h3>
-              <p class="small">
-                By typing your full name below, you give written consent to Moontera LLC to conduct limited and/or full
-                queries of the FMCSA Drug and Alcohol Clearinghouse as required under 49 CFR Part 382, for employment
-                eligibility purposes.
-              </p>
-
-              <label>
-                Type Full Name to Authorize (Consent Signature) *
-                <input name="clearinghouse_consent_signature" type="text" required />
-              </label>
-
-              <button class="btn full" type="submit">Submit Application</button>
-              <p class="tiny">After submit, Moontera LLC will receive your application by email.</p>
-            </form>
-          </div>
-
-          <!-- RIGHT: TRUCK IMAGE -->
-          <div class="application-image">
-            <div class="box">
-              <img src="../assets/truck-side.png" alt="Moontera truck" />
             </div>
+
+            <div class="grid2">
+              <label>
+                Phone *
+                <input name="phone" type="tel" required />
+              </label>
+
+              <label>
+                Email *
+                <input name="email" type="email" required />
+              </label>
+            </div>
+
+            <h3>Position</h3>
+            <div class="grid2">
+              <label>
+                Position Applied For
+                <input name="position" type="text" />
+              </label>
+
+              <label>
+                Start Date
+                <input name="start_date" type="date" />
+              </label>
+            </div>
+
+            <h3>Consent</h3>
+            <p class="small">
+              By typing your name below, you authorize Moontera LLC to conduct required employment checks.
+            </p>
+
+            <label>
+              Full Name (Signature) *
+              <input name="signature" type="text" required />
+            </label>
+
+            <button class="btn full" type="submit">Submit Application</button>
+            <p class="tiny">Moontera LLC will receive this application by email.</p>
+          </form>
+        </div>
+
+        <!-- RIGHT: TRUCK IMAGE -->
+        <div class="application-image">
+          <div class="box">
+            <img
+              src="../assets/truck-side.png"
+              alt="Moontera Truck"
+            />
           </div>
         </div>
-      </section>
-    </main>
 
-    <footer class="footer">
-      <div class="wrap">
-        <div>© <span id="y"></span> Moontera LLC</div>
-        <div class="small">Buffalo Grove, IL • DOT 4379183 • MC 1716328</div>
       </div>
-    </footer>
+    </section>
+  </main>
 
-    <script>
-      document.getElementById("y").textContent = new Date().getFullYear();
-    </script>
-  </body>
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="wrap">
+      <div>© <span id="y"></span> Moontera LLC</div>
+      <div class="small">Buffalo Grove, IL • DOT 4379183 • MC 1716328</div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById("y").textContent = new Date().getFullYear();
+  </script>
+</body>
 </html>
