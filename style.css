@@ -199,7 +199,17 @@ textarea {
   max-height: 520px;
   object-fit: contain;
   display: block;
+
+  /* 🔆 Brightness */
+  filter: brightness(1.25) contrast(1.05);
+
+  /* smoother look */
+  image-rendering: auto;
 }
+.application-image {
+  transform: translateX(-30px);
+}
+
 
 /* Responsive */
 @media (max-width: 900px) {
