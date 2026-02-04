@@ -201,7 +201,7 @@ textarea {
   display: block;
 
   /* 🔆 Brightness */
-  filter: brightness(1.25) contrast(1.05);
+  filter: brightness(3) contrast(2.8);
 
   /* smoother look */
   image-rendering: auto;
