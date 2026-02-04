@@ -65,6 +65,20 @@ a:hover { text-decoration: underline; }
   align-items: center;
 }
 
+/* ✅ Added: Logo circle to match your theme */
+.logo{
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: #111;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 22px rgba(0,0,0,.25);
+}
+
 .moon-icon {
   width: 24px;
   height: 24px;
@@ -89,6 +103,8 @@ a:hover { text-decoration: underline; }
   border-radius: 10px;
   padding: 10px 14px;
   display: inline-block;
+  border: 0;
+  cursor: pointer;
 }
 .btn:hover { opacity: .9; }
 .btn.big { padding: 14px 18px; }
@@ -179,6 +195,8 @@ textarea {
   margin-top: 6px;
 }
 
+textarea { min-height: 120px; }
+
 /* Footer */
 .footer {
   border-top: 1px solid var(--line);
@@ -206,10 +224,10 @@ textarea {
   /* smoother look */
   image-rendering: auto;
 }
+
 .application-image {
   transform: translateX(-50px);
 }
-
 
 /* Responsive */
 @media (max-width: 900px) {
@@ -229,5 +247,9 @@ textarea {
   .application-image img {
     max-height: 320px;
     margin-top: 20px;
+  }
+
+  .application-image {
+    transform: none;
   }
 }

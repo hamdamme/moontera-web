@@ -1,48 +1,39 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Driver Application | Moontera LLC</title>
-  <link rel="stylesheet" href="../style.css" />
-</head>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Driver Application | Moontera LLC</title>
+    <link rel="stylesheet" href="../style.css" />
+  </head>
 
-<body>
-  <!-- HEADER -->
-  <header class="top">
-    <div class="wrap">
-      <div class="brand">
-        <img src="../assets/moon.png" alt="Moontera LLC logo" class="moon-icon" />
-        <div>
-          <div class="name">Moontera LLC</div>
-          <div class="tag">Driver Application</div>
-        </div>
-      </div>
-
-      <nav class="nav">
-        <a href="../index.html">Home</a>
-      </nav>
-    </div>
-  </header>
-
-  <!-- MAIN -->
-  <main>
-    <section class="section">
+  <body>
+    <header class="top">
       <div class="wrap">
-        <h2>Driver Application</h2>
-        <p class="small">
-          Fill out this application in your browser. After you submit, Moontera LLC will receive it by email.
-        </p>
+        <div class="brand">
+          <div class="logo">M</div>
+          <div>
+            <div class="name">Moontera LLC</div>
+            <div class="tag">Driver Application</div>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <a href="/index.html">Home</a>
+          <a class="btn" href="#apply">Apply</a>
+        </nav>
       </div>
+    </header>
 
-      <!-- FORM + IMAGE SIDE BY SIDE -->
-      <div class="wrap application-layout">
+    <main>
+      <section class="section" id="apply">
+        <div class="wrap">
+          <h2>Driver Application</h2>
+          <p class="small">
+            Fill out this application in your browser. After you submit, Moontera LLC will receive it by email.
+          </p>
 
-        <!-- LEFT: FORM -->
-        <div class="application-form">
-          <form name="driver-application" method="POST" data-netlify="true" class="box">
-            <input type="hidden" name="form-name" value="driver-application" />
-
+          <form method="POST" action="https://driver.llcmoontera.workers.dev/">
             <h3>Applicant Information</h3>
 
             <label>
@@ -57,7 +48,7 @@
 
             <div class="grid2">
               <label>
-                City / State / Zip *
+                City/State/Zip *
                 <input name="city_state_zip" type="text" required />
               </label>
 
@@ -83,54 +74,122 @@
             <div class="grid2">
               <label>
                 Position Applied For
-                <input name="position" type="text" />
+                <input name="position" type="text" placeholder="Company Driver, Owner Operator, etc." />
               </label>
 
               <label>
-                Start Date
+                Date Available to Start
                 <input name="start_date" type="date" />
               </label>
             </div>
 
-            <h3>Consent</h3>
-            <p class="small">
-              By typing your name below, you authorize Moontera LLC to conduct required employment checks.
-            </p>
+            <h3>Driver’s License Information</h3>
+            <div class="grid2">
+              <label>
+                License Number *
+                <input name="license_number" type="text" required />
+              </label>
+
+              <label>
+                State *
+                <input name="license_state" type="text" required />
+              </label>
+            </div>
+
+            <div class="grid2">
+              <label>
+                Class
+                <input name="license_class" type="text" placeholder="A / B / C" />
+              </label>
+
+              <label>
+                Endorsements
+                <input name="endorsements" type="text" placeholder="Hazmat, Tanker, etc." />
+              </label>
+            </div>
 
             <label>
-              Full Name (Signature) *
-              <input name="signature" type="text" required />
+              License Expiration Date
+              <input name="license_expiration" type="date" />
+            </label>
+
+            <h3>Medical Card Information</h3>
+            <div class="grid2">
+              <label>
+                Registration Date
+                <input name="medcard_registration" type="date" />
+              </label>
+
+              <label>
+                Expiration Date
+                <input name="medcard_expiration" type="date" />
+              </label>
+            </div>
+
+            <label>
+              Date of last DOT Regulated Drug or Alcohol test collected
+              <input name="last_dot_test_date" type="date" />
+            </label>
+
+            <!-- ===========================
+                 NEW SECTION: CLEARINGHOUSE
+                 =========================== -->
+
+            <h3>FMCSA Drug & Alcohol Clearinghouse (Required)</h3>
+
+            <div class="box">
+              <p class="small" style="margin: 0 0 10px;">
+                All CDL drivers must be registered in the FMCSA Clearinghouse so you can provide consent for a query.
+                Please open the Clearinghouse to register/login, then return to this page to finish your application.
+              </p>
+
+              <a
+                class="btn"
+                href="https://clearinghouse.fmcsa.dot.gov/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Open FMCSA Clearinghouse
+              </a>
+
+              <p class="tiny" style="margin-top: 10px;">
+                Tip: After you register/login, you may need to provide electronic consent inside the Clearinghouse portal.
+              </p>
+            </div>
+
+            <h3>FMCSA Drug & Alcohol Clearinghouse Consent</h3>
+            <p class="small">
+              By typing your full name below, you provide written consent for Moontera LLC to request a limited query and,
+              if needed, a full query in the FMCSA Drug & Alcohol Clearinghouse, as required by 49 CFR Part 382.
+              You may also be required to provide electronic consent inside the Clearinghouse portal.
+            </p>
+
+            <label style="display:block; margin-top:10px;">
+              <input type="checkbox" name="clearinghouse_portal_ack" required />
+              I understand I may need to register/login and provide consent inside the FMCSA Clearinghouse portal.
+            </label>
+
+            <label>
+              Type Full Name to Authorize (Consent Signature) *
+              <input name="clearinghouse_consent_signature" type="text" required />
             </label>
 
             <button class="btn full" type="submit">Submit Application</button>
-            <p class="tiny">Moontera LLC will receive this application by email.</p>
+            <p class="tiny">After submit, Moontera LLC will receive your application by email.</p>
           </form>
         </div>
+      </section>
+    </main>
 
-        <!-- RIGHT: TRUCK IMAGE -->
-        <div class="application-image">
-          <div class="box">
-            <img
-              src="../assets/truck-side.png"
-              alt="Moontera Truck"
-            />
-          </div>
-        </div>
-
+    <footer class="footer">
+      <div class="wrap">
+        <div>© <span id="y"></span> Moontera LLC</div>
+        <div class="small">Buffalo Grove, IL • DOT 4379183 • MC 1716328</div>
       </div>
-    </section>
-  </main>
+    </footer>
 
-  <!-- FOOTER -->
-  <footer class="footer">
-    <div class="wrap">
-      <div>© <span id="y"></span> Moontera LLC</div>
-      <div class="small">Buffalo Grove, IL • DOT 4379183 • MC 1716328</div>
-    </div>
-  </footer>
-
-  <script>
-    document.getElementById("y").textContent = new Date().getFullYear();
-  </script>
-</body>
+    <script>
+      document.getElementById("y").textContent = new Date().getFullYear();
+    </script>
+  </body>
 </html>
