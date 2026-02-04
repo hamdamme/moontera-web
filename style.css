@@ -94,19 +94,15 @@ a:hover { text-decoration: underline; }
 .btn.big { padding: 14px 18px; }
 .btn.full { width: 100%; text-align: center; }
 
-/* Hero */
+/* Hero (HOME) */
 .hero {
   position: relative;
   padding: 96px 0 64px;
   background:
-    linear-gradient(
-      rgba(0, 0, 0, 0.75),
-      rgba(0, 0, 0, 0.75)
-    ),
+    linear-gradient(rgba(0,0,0,.75), rgba(0,0,0,.75)),
     url("assets/truck-bg.png") center right no-repeat;
   background-size: contain;
 }
-
 
 .hero-grid {
   display: grid;
@@ -190,16 +186,12 @@ textarea {
   background: #1c1c1c;
 }
 
-/* ✅ Application page: form + image side-by-side */
+/* ✅ Application page: form + truck side-by-side */
 .application-layout {
   display: grid;
   grid-template-columns: 1.2fr 0.8fr;
   gap: 24px;
-  align-items: start;
-}
-
-.image-box {
-  padding: 16px;
+  align-items: center;
 }
 
 .application-image img {
@@ -215,17 +207,17 @@ textarea {
   .grid3 { grid-template-columns: 1fr; }
   .grid2 { grid-template-columns: 1fr; }
 
+  .hero {
+    background-position: center;
+    background-size: cover;
+  }
+
   .application-layout {
     grid-template-columns: 1fr;
   }
 
   .application-image img {
     max-height: 320px;
-  }
-}
-@media (max-width: 900px) {
-  .hero {
-    background-position: center;
-    background-size: cover;
+    margin-top: 20px;
   }
 }
