@@ -5,9 +5,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-10">
         <Link href="/" className="text-xl font-bold tracking-tight text-slate-950">
-         <span className="text-2xl font-black tracking-[0.2em] text-slate-950">
-  MOONTERA LLC
-</span>
+          MOONTERA LLC
         </Link>
 
         <nav className="hidden items-center gap-8 text-sm font-semibold text-slate-700 md:flex">
