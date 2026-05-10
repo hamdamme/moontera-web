@@ -23,7 +23,7 @@ export default function FullApplicationPage() {
     }
   }, []);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const form = event.currentTarget;
@@ -61,8 +61,20 @@ export default function FullApplicationPage() {
       JSON.stringify(data)
     );
 
-    setStatus("Complete application submitted successfully.");
-    form.reset();
+    const response = await fetch("/api/application/full", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (response.ok) {
+      setStatus("Complete application submitted successfully.");
+      form.reset();
+    } else {
+      setStatus("Something went wrong. Please try again.");
+    }
   }
 
   return (

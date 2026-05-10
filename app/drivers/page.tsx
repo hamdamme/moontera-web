@@ -1,198 +1,178 @@
-"use client";
+import Link from "next/link";
 
-import { useState } from "react";
+export default function DriversPage() {
+  const benefits = [
+    "Competitive opportunities",
+    "Consistent communication",
+    "Professional dispatch support",
+    "Safety-focused operations",
+    "Respectful company culture",
+    "Growing transportation team",
+  ];
 
-export default function ApplicationPage() {
-  const [status, setStatus] = useState("");
-
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-
-    const data = {
-      full_name: formData.get("full_name"),
-      address: formData.get("address"),
-      city_state_zip: formData.get("city_state_zip"),
-      dob: formData.get("dob"),
-      phone: formData.get("phone"),
-      email: formData.get("email"),
-      position: formData.get("position"),
-      start_date: formData.get("start_date"),
-    };
-
-    localStorage.setItem(
-      "moontera_application_general",
-      JSON.stringify(data)
-    );
-
-    setStatus("Quick application submitted successfully.");
-    form.reset();
-  }
+  const requirements = [
+    "Valid CDL license",
+    "Professional driving attitude",
+    "Commitment to safety",
+    "Clear communication with dispatch",
+    "Reliable pickup and delivery performance",
+  ];
 
   return (
     <main className="bg-white text-slate-950">
-      {/* HERO */}
       <section className="relative overflow-hidden bg-slate-950 px-6 py-28 text-white lg:px-10">
-        <div className="absolute inset-0 bg-[url('/images/truck-hero.jpg')] bg-cover bg-center opacity-25" />
+        <div className="absolute inset-0 bg-[url('/images/truck-hero.jpg')] bg-cover bg-center opacity-30" />
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/90 to-slate-950/30" />
 
         <div className="relative mx-auto max-w-7xl">
           <p className="text-sm font-bold uppercase tracking-[0.3em] text-blue-400">
-            Driver Application
+            Driver Opportunities
           </p>
 
           <h1 className="mt-4 max-w-4xl text-5xl font-bold tracking-tight md:text-6xl">
-            Start Your Application
+            Drive with a company built on communication, respect, and support.
           </h1>
 
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-            Submit a quick application now, or complete the full driver
-            qualification form if you are ready to provide CDL, medical card,
-            and consent details.
+            Moontera LLC works with professional drivers who value safety,
+            consistency, and dependable freight operations.
           </p>
+
+          <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+            <Link
+              href="/application"
+              className="rounded-full bg-blue-600 px-8 py-4 text-center text-sm font-bold text-white hover:bg-blue-700"
+            >
+              Quick Apply
+            </Link>
+
+            <Link
+              href="/application/details"
+              className="rounded-full border border-white/30 px-8 py-4 text-center text-sm font-bold text-white hover:bg-white hover:text-slate-950"
+            >
+              Full Application
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* FORM */}
       <section className="bg-slate-50 px-6 py-24 lg:px-10">
-        <form
-          onSubmit={handleSubmit}
-          className="mx-auto max-w-4xl rounded-[2rem] border border-slate-200 bg-white p-8 shadow-xl"
-        >
-          <p className="text-sm font-bold uppercase tracking-[0.3em] text-blue-600">
-            Quick Application
-          </p>
+        <div className="mx-auto max-w-7xl">
+          <div className="max-w-3xl">
+            <p className="text-sm font-bold uppercase tracking-[0.3em] text-blue-600">
+              Why Drive With Us
+            </p>
 
-          <h2 className="mt-3 text-3xl font-bold tracking-tight">
-            General Information
-          </h2>
+            <h2 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">
+              A professional environment for serious drivers.
+            </h2>
 
-          <div className="mt-8 grid gap-5">
-            <div>
-              <label className="text-sm font-bold">Full Name</label>
-              <input
-                name="full_name"
-                required
-                type="text"
-                placeholder="Full legal name"
-                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-bold">Address</label>
-              <input
-                name="address"
-                required
-                type="text"
-                placeholder="Street address, apartment/unit"
-                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-bold">City / State / ZIP</label>
-              <input
-                name="city_state_zip"
-                required
-                type="text"
-                placeholder="City / State / ZIP"
-                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-bold">Date of Birth</label>
-                <input
-                  name="dob"
-                  required
-                  type="date"
-                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-bold">Phone</label>
-                <input
-                  name="phone"
-                  required
-                  type="tel"
-                  placeholder="Phone number"
-                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-sm font-bold">Email</label>
-              <input
-                name="email"
-                required
-                type="email"
-                placeholder="email@example.com"
-                className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="text-sm font-bold">
-                  Position Applied For
-                </label>
-
-                <select
-                  name="position"
-                  required
-                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                >
-                  <option>Owner Operator</option>
-                  <option>Company Driver</option>
-                  <option>Lease Driver</option>
-                  <option>Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-sm font-bold">
-                  Available Start Date
-                </label>
-
-                <input
-                  name="start_date"
-                  required
-                  type="date"
-                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                />
-              </div>
-            </div>
-
-            {/* BUTTONS */}
-            <div className="mt-4 flex flex-col gap-4 sm:flex-row">
-              <button
-                type="submit"
-                className="rounded-full bg-blue-600 px-8 py-4 text-sm font-bold text-white hover:bg-blue-700"
-              >
-                Submit Quick Application
-              </button>
-
-              <a
-                href="/application/details"
-                className="rounded-full border border-slate-300 px-8 py-4 text-center text-sm font-bold text-slate-900 hover:border-blue-600 hover:text-blue-600"
-              >
-                Complete Full Application
-              </a>
-            </div>
-
-            {status && (
-              <p className="rounded-xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700">
-                {status}
-              </p>
-            )}
+            <p className="mt-5 text-lg leading-8 text-slate-600">
+              We focus on simple communication, dependable coordination, and
+              respect for the people who keep freight moving.
+            </p>
           </div>
-        </form>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {benefits.map((item) => (
+              <div
+                key={item}
+                className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+              >
+                <div className="mb-5 h-12 w-12 rounded-2xl bg-blue-600" />
+                <p className="text-lg font-bold leading-7 text-slate-900">
+                  {item}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="px-6 py-24 lg:px-10">
+        <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-2 lg:items-center">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-[0.3em] text-blue-600">
+              Driver Requirements
+            </p>
+
+            <h2 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">
+              We look for dependable, safety-focused professionals.
+            </h2>
+
+            <p className="mt-6 text-lg leading-8 text-slate-600">
+              Drivers are expected to communicate clearly, operate safely, and
+              represent Moontera LLC with professionalism.
+            </p>
+          </div>
+
+          <div className="grid gap-4">
+            {requirements.map((item) => (
+              <div
+                key={item}
+                className="rounded-2xl border border-slate-200 bg-white p-6 font-semibold shadow-sm"
+              >
+                ✓ {item}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-slate-950 px-6 py-24 text-white lg:px-10">
+        <div className="mx-auto max-w-7xl">
+          <div className="max-w-3xl">
+            <p className="text-sm font-bold uppercase tracking-[0.3em] text-blue-400">
+              Application Options
+            </p>
+
+            <h2 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">
+              Choose the application that fits your situation.
+            </h2>
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-2">
+            <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8">
+              <p className="text-sm font-bold text-blue-400">
+                Quick Application
+              </p>
+              <h3 className="mt-4 text-2xl font-bold">
+                Submit basic information
+              </h3>
+              <p className="mt-4 leading-7 text-slate-300">
+                Use this option if you want Moontera LLC to contact you first
+                before completing detailed driver qualification information.
+              </p>
+
+              <Link
+                href="/application"
+                className="mt-8 inline-flex rounded-full bg-blue-600 px-8 py-4 text-sm font-bold text-white hover:bg-blue-700"
+              >
+                Quick Apply
+              </Link>
+            </div>
+
+            <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8">
+              <p className="text-sm font-bold text-blue-400">
+                Full Application
+              </p>
+              <h3 className="mt-4 text-2xl font-bold">
+                Complete driver qualification details
+              </h3>
+              <p className="mt-4 leading-7 text-slate-300">
+                Use this option if you are ready to provide CDL, medical card,
+                DOT testing, and Clearinghouse consent information.
+              </p>
+
+              <Link
+                href="/application/details"
+                className="mt-8 inline-flex rounded-full bg-white px-8 py-4 text-sm font-bold text-slate-950 hover:bg-slate-200"
+              >
+                Full Application
+              </Link>
+            </div>
+          </div>
+        </div>
       </section>
     </main>
   );
