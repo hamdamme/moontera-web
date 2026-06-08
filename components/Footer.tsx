@@ -11,13 +11,14 @@ export default function Footer() {
           </p>
         </div>
 
-        <div className="text-sm text-slate-400">
+        <div className="text-sm leading-7 text-slate-400">
           <p>Buffalo Grove, IL</p>
           <p>Phone: 773-882-5595</p>
           <p>Telegram: @moontera_llc</p>
+          <p>USDOT 4379183 • MC 1716328</p>
         </div>
 
-        <div className="text-sm text-slate-400">
+        <div className="text-sm leading-7 text-slate-400">
           <p>info@moonterallc.com</p>
           <p>dispatch@moonterallc.com</p>
           <p>quote@moonterallc.com</p>
@@ -25,8 +26,20 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="mx-auto mt-8 max-w-7xl text-sm text-slate-500">
-        © {new Date().getFullYear()} Moontera LLC. All rights reserved.
+      <div className="mx-auto mt-8 flex max-w-7xl flex-col gap-4 border-t border-white/10 pt-6 text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
+        <p>
+          © {new Date().getFullYear()} Moontera LLC. All rights reserved.
+        </p>
+
+        <div className="flex gap-5">
+          <Link href="/privacy-policy" className="hover:text-white">
+            Privacy Policy
+          </Link>
+
+          <Link href="/terms-of-use" className="hover:text-white">
+            Terms of Use
+          </Link>
+        </div>
       </div>
     </footer>
   );
