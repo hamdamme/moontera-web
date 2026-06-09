@@ -23,6 +23,7 @@ export default function ApplicationPage() {
       email: formData.get("email"),
       position: formData.get("position"),
       start_date: formData.get("start_date"),
+      sms_consent: formData.get("sms_consent") === "on",
     };
 
     localStorage.setItem("moontera_application_general", JSON.stringify(data));
@@ -177,6 +178,28 @@ export default function ApplicationPage() {
                 />
               </div>
             </div>
+            <label className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm leading-6 text-slate-700">
+  <input
+    name="sms_consent"
+    type="checkbox"
+    className="mt-1 h-4 w-4"
+  />
+
+  <span>
+    I consent to receive conversational and informational SMS messages from
+    Moontera LLC regarding my inquiry. Reply STOP to opt out. Reply HELP for
+    support. Message and data rates may apply. Messaging frequency may vary.
+    See our{" "}
+    <a href="/privacy-policy" className="font-bold text-blue-600">
+      Privacy Policy
+    </a>{" "}
+    and{" "}
+    <a href="/terms-of-use" className="font-bold text-blue-600">
+      Terms of Use
+    </a>
+    .
+  </span>
+</label>
 
             <div className="mt-4 flex flex-col gap-4 sm:flex-row">
               <button
