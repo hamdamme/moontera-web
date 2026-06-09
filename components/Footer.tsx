@@ -7,7 +7,7 @@ export default function Footer() {
         <div>
           <h3 className="text-xl font-bold">Moontera LLC</h3>
           <p className="mt-3 text-sm text-slate-400">
-            Established 2024 • Trucking operations since 2025
+            Established 2024 • Trucking operations since 2024
           </p>
         </div>
 
