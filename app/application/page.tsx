@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function ApplicationPage() {
   const [status, setStatus] = useState("");
+  const router = useRouter();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -34,8 +36,7 @@ export default function ApplicationPage() {
     });
 
     if (response.ok) {
-      setStatus("Quick application submitted successfully.");
-      form.reset();
+      router.push("/application/success");
     } else {
       setStatus("Something went wrong. Please try again.");
     }

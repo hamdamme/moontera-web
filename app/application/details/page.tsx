@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function FullApplicationPage() {
   const [status, setStatus] = useState("");
+  const router = useRouter();
   const [generalInfo, setGeneralInfo] = useState({
     full_name: "",
     address: "",
@@ -70,8 +72,7 @@ export default function FullApplicationPage() {
     });
 
     if (response.ok) {
-      setStatus("Complete application submitted successfully.");
-      form.reset();
+     router.push("/application/success");
     } else {
       setStatus("Something went wrong. Please try again.");
     }
