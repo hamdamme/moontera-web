@@ -19,6 +19,7 @@ export default function ContactPage() {
       phone: formData.get("phone"),
       inquiryType: formData.get("inquiryType"),
       message: formData.get("message"),
+      sms_consent: formData.get("sms_consent") === "on",
     };
 
     const response = await fetch("/api/contact", {
@@ -229,7 +230,28 @@ export default function ContactPage() {
                   className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
+              <label className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm leading-6 text-slate-700">
+  <input
+    name="sms_consent"
+    type="checkbox"
+    className="mt-1 h-4 w-4"
+  />
 
+  <span>
+    I consent to receive conversational and informational SMS messages from
+    Moontera LLC regarding my inquiry. Reply STOP to opt out. Reply HELP for
+    support. Message and data rates may apply. Messaging frequency may vary.
+    See our{" "}
+    <a href="/privacy-policy" className="font-bold text-blue-600">
+      Privacy Policy
+    </a>{" "}
+    and{" "}
+    <a href="/terms-of-use" className="font-bold text-blue-600">
+      Terms of Use
+    </a>
+    .
+  </span>
+</label>
               <button
                 type="submit"
                 className="rounded-full bg-blue-600 px-8 py-4 text-sm font-bold text-white transition hover:bg-blue-700"
