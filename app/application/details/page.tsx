@@ -311,7 +311,7 @@ export default function FullApplicationPage() {
             </h2>
 
             <div className="mt-8 grid gap-5 md:grid-cols-3">
-              <div>
+              {/* <div>
                 <label className="text-sm font-bold">
                   Medical Card Registration Date
                 </label>
@@ -321,7 +321,7 @@ export default function FullApplicationPage() {
                   type="date"
                   className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 />
-              </div>
+              </div> */}
 
               <div>
                 <label className="text-sm font-bold">
@@ -336,7 +336,7 @@ export default function FullApplicationPage() {
               </div>
 
               <div>
-                <label className="text-sm font-bold">Last DOT Test Date</label>
+                <label className="text-sm font-bold">Last Drug and Alcohol Test Date</label>
                 <input
                   name="last_dot_test_date"
                   required
