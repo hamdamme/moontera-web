@@ -53,7 +53,7 @@ export default function HomePage() {
 
               <Link
                 href="/drivers"
-                className="rounded-full border border-white/30 px-8 py-4 text-center text-sm font-bold text-white transition hover:bg-white hover:text-slate-950"
+                className="rounded-full bg-white px-8 py-4 text-center text-sm font-bold text-slate-950 transition hover:bg-slate-200"
               >
                 Apply as Driver
               </Link>
@@ -208,7 +208,7 @@ export default function HomePage() {
           <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
             <Link
               href="/contact"
-              className="rounded-full bg-white px-8 py-4 text-sm font-bold text-blue-700"
+              className="rounded-full bg-slate-950 px-8 py-4 text-sm font-bold text-white transition hover:bg-slate-800"
             >
               Request a Quote
             </Link>
