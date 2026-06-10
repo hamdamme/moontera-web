@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function DriversPage() {
   const benefits = [
-    "Competitive opportunities/compensation",
+    "Competitive compensation",
     "Consistent communication",
     "24/7 Dispatch Support",
     "Professional dispatch support",
