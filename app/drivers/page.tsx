@@ -166,7 +166,8 @@ export default function DriversPage() {
 
               <Link
                 href="/application/details"
-                className="mt-8 inline-flex rounded-full bg-white px-8 py-4 text-sm font-bold text-slate-950 hover:bg-slate-200"
+                //className="mt-8 inline-flex rounded-full bg-white px-8 py-4 text-sm font-bold text-slate-950 hover:bg-slate-200"
+                className="mt-8 inline-flex rounded-full bg-blue-600 px-8 py-4 text-sm font-bold text-white hover:bg-blue-700"
               >
                 Full Application
               </Link>
