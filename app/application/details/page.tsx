@@ -74,7 +74,9 @@ export default function FullApplicationPage() {
 
     if (response.ok) {
      router.push("/application/success");
-    } else {
+    } 
+    
+    else {
       setStatus("Something went wrong. Please try again.");
     }
   }
@@ -311,17 +313,7 @@ export default function FullApplicationPage() {
             </h2>
 
             <div className="mt-8 grid gap-5 md:grid-cols-3">
-              {/* <div>
-                <label className="text-sm font-bold">
-                  Medical Card Registration Date
-                </label>
-                <input
-                  name="medcard_registration"
-                  required
-                  type="date"
-                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
-                />
-              </div> */}
+  
 
               <div>
                 <label className="text-sm font-bold">
@@ -434,28 +426,31 @@ export default function FullApplicationPage() {
               </div>
             </div>
           </div>
-          <label className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm leading-6 text-slate-700">
-  <input
-    name="sms_consent"
-    type="checkbox"
-    className="mt-1 h-4 w-4"
-  />
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+  <label className="flex items-start gap-3 text-sm leading-6 text-slate-700">
+    <input
+      name="sms_consent"
+      type="checkbox"
+      className="mt-1 h-4 w-4 shrink-0"
+    />
 
-  <span>
-    I consent to receive conversational and informational SMS messages from
-    Moontera LLC regarding my inquiry. Reply STOP to opt out. Reply HELP for
-    support. Message and data rates may apply. Messaging frequency may vary.
-    See our{" "}
-    <a href="/privacy-policy" className="font-bold text-blue-600">
-      Privacy Policy
-    </a>{" "}
-    and{" "}
-    <a href="/terms-of-use" className="font-bold text-blue-600">
-      Terms of Use
-    </a>
-    .
-  </span>
-</label>
+    <span>
+      I consent to receive conversational and informational SMS messages from
+      Moontera LLC regarding my driver application, onboarding process, and
+      employment-related communications. Reply STOP to opt out. Reply HELP for
+      support. Message and data rates may apply. Messaging frequency may vary.
+      See our{" "}
+      <a href="/privacy-policy" className="font-bold text-blue-600 hover:underline">
+        Privacy Policy
+      </a>{" "}
+      and{" "}
+      <a href="/terms-of-use" className="font-bold text-blue-600 hover:underline">
+        Terms of Use
+      </a>
+      .
+    </span>
+  </label>
+</div>
 
           {/* SUBMIT */}
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
