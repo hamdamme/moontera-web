@@ -2,8 +2,9 @@ import Link from "next/link";
 
 export default function DriversPage() {
   const benefits = [
-    "Competitive opportunities",
+    "Competitive opportunities/compensation",
     "Consistent communication",
+    "24/7 Dispatch Support",
     "Professional dispatch support",
     "Safety-focused operations",
     "Respectful company culture",
@@ -79,10 +80,10 @@ export default function DriversPage() {
                 key={item}
                 className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
               >
-                <div className="mb-5 h-12 w-12 rounded-2xl bg-blue-600" />
                 <p className="text-lg font-bold leading-7 text-slate-900">
-                  {item}
-                </p>
+  <span className="mr-2 text-blue-600">✓</span>
+  {item}
+</p>
               </div>
             ))}
           </div>
