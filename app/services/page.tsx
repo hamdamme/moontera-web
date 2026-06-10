@@ -102,8 +102,8 @@ export default function ServicesPage() {
 
           <Link
             href="/contact"
-            className="rounded-full bg-slate-950 px-8 py-4 text-sm font-bold text-white transition hover:bg-slate-800"
-          >
+            className="mt-8 inline-flex rounded-full bg-blue-600 px-8 py-4 text-sm font-bold text-white hover:bg-blue-700"
+            >
             Request a Quote
           </Link>
         </div>
