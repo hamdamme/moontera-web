@@ -102,7 +102,7 @@ export default function ServicesPage() {
 
           <Link
             href="/contact"
-            className="mt-8 inline-flex rounded-full bg-white px-8 py-4 text-sm font-bold text-blue-700"
+            className="rounded-full bg-slate-950 px-8 py-4 text-sm font-bold text-white transition hover:bg-slate-800"
           >
             Request a Quote
           </Link>
