@@ -38,6 +38,7 @@ export default function FullApplicationPage() {
       dob: formData.get("dob"),
       phone: formData.get("phone"),
       email: formData.get("email"),
+      ssn_last4: formData.get("ssn_last4"),
       position: formData.get("position"),
       start_date: formData.get("start_date"),
       sms_consent: formData.get("sms_consent") === "on",
@@ -193,7 +194,21 @@ export default function FullApplicationPage() {
                   className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
+              <div>
+  <label className="text-sm font-bold">
+    Last 4 Digits of SSN
+  </label>
 
+  <input
+    name="ssn_last4"
+    required
+    type="text"
+    maxLength={4}
+    pattern="[0-9]{4}"
+    placeholder="1234"
+    className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+  />
+</div>
               <div className="grid gap-5 md:grid-cols-2">
                 <div>
                   <label className="text-sm font-bold">
