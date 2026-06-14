@@ -133,7 +133,7 @@ export default function ContactPage() {
                   </a>
                 </div>
 
-                <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+                {/* <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
                   <p className="font-bold text-slate-950">Telegram</p>
                   <a
                     href="https://t.me/moontera_llc"
@@ -143,7 +143,7 @@ export default function ContactPage() {
                   >
                     @moontera_llc
                   </a>
-                </div>
+                </div> */}
               </div>
 
               <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
