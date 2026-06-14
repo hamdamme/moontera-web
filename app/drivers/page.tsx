@@ -49,7 +49,7 @@ export default function DriversPage() {
 
             <Link
               href="/application/details"
-              className="rounded-full bg-slate-950 px-8 py-4 text-sm font-bold text-white transition hover:bg-slate-800"
+              className="rounded-full border-2 border-white bg-transparent px-8 py-4 text-sm font-bold text-white transition hover:bg-white hover:text-slate-950"
             >
               Full Application
             </Link>
