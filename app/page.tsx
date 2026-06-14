@@ -105,8 +105,7 @@ export default function HomePage() {
                 key={service.title}
                 className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
               >
-                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-xl">
-  🚚
+                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-xl"> {service.icon}
 </div>
                 <h3 className="text-xl font-bold">{service.title}</h3>
                 <p className="mt-4 text-sm leading-7 text-slate-600">
