@@ -3,18 +3,22 @@ import Link from "next/link";
 export default function HomePage() {
   const services = [
     {
+      icon: "🚚",
       title: "Truckload Freight",
       text: "Reliable transportation for regional and nationwide freight movement.",
     },
     {
+      icon: "🛣️",
       title: "Dedicated Routes",
       text: "Consistent route support for recurring business shipping needs.",
     },
     {
+      icon: "📦",
       title: "Dispatch Support",
       text: "Clear communication and coordination from pickup to delivery.",
     },
     {
+      icon: "⭐",
       title: "Premium Delivery",
       text: "Careful handling for shipments requiring extra attention.",
     },
@@ -101,7 +105,9 @@ export default function HomePage() {
                 key={service.title}
                 className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
               >
-                <div className="mb-6 h-12 w-12 rounded-2xl bg-blue-600" />
+                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-xl">
+  🚚
+</div>
                 <h3 className="text-xl font-bold">{service.title}</h3>
                 <p className="mt-4 text-sm leading-7 text-slate-600">
                   {service.text}
