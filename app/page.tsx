@@ -1,4 +1,7 @@
+import ImageGallery from "@/components/ImageGallery";
+
 import Link from "next/link";
+
 
 export default function HomePage() {
   const services = [
@@ -227,6 +230,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      <ImageGallery />
     </main>
   );
 }
