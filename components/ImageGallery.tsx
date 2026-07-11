@@ -19,6 +19,8 @@ const images = [
     "/images/gallery/loading/loading-16.jpeg",
     "/images/gallery/loading/loading-17.jpeg",
     "/images/gallery/loading/loading-18.jpeg",
+    "/images/gallery/outstanding/out-1.jpg",
+    "/images/gallery/outstanding/out-2.jpg",
   ];
 
 export default function ImageGallery() {
