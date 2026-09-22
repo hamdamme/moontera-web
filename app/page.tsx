@@ -226,6 +226,9 @@ export default function HomePage() {
               className="rounded-full border border-white/40 px-8 py-4 text-sm font-bold text-white"
             >
               Call 773-882-5595
+              Call 847-500-8319
+              Call 312-500-1513
+
             </a>
           </div>
         </div>

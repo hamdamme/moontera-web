@@ -13,7 +13,7 @@ export default function Footer() {
 
         <div className="text-sm leading-7 text-slate-400">
           <p>Buffalo Grove, IL</p>
-          <p>Phone: 773-882-5595</p>
+          <p>Phone: 773-882-5595 847-500-8319 312-500-1513</p>
           <p>WhatsApp: 773-882-5595</p>
           <p>Telegram: @moontera_llc</p>
           <p>USDOT 4379183 • MC 1716328</p>
