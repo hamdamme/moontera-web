@@ -225,8 +225,7 @@ export default function HomePage() {
               href="tel:7738825595"
               className="rounded-full border border-white/40 px-8 py-4 text-sm font-bold text-white"
             >
-              Call 773-882-5595
-              Call 847-500-8319
+              Call 847-510-4147
               Call 312-500-1513
 
             </a>
