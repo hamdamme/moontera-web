@@ -14,16 +14,16 @@ export default function Footer() {
         <div className="text-sm leading-7 text-slate-400">
           <p>Buffalo Grove, IL</p>
           <p>Phone: 773-882-5595 
-            Dispatch 847-500-8319 
+            
+            Dispatch 847-510-4147 
+            
             Dispatch 312-500-1513</p>
           <p>WhatsApp: 773-882-5595</p>
-          <p>Telegram: @moontera_llc</p>
           <p>USDOT 4379183 • MC 1716328</p>
         </div>
 
         <div className="text-sm leading-7 text-slate-400">
           <p>info@moonterallc.com</p>
-          <p>dispatch@moonterallc.com</p>
           <p>logistics@moonterallc.com</p>
           <p>quote@moonterallc.com</p>
           <p>accounting@moonterallc.com</p>
