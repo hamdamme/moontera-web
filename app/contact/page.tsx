@@ -117,7 +117,7 @@ export default function ContactPage() {
                     href="mailto:dispatch@moonterallc.com"
                     className="mt-2 block text-slate-600 hover:text-blue-600"
                   >
-                    dispatch@moonterallc.com
+                    logistics@moonterallc.com
                   </a>
                 </div>
               </div>
