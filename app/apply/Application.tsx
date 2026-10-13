@@ -396,6 +396,15 @@ export default function Application() {
             <br />
             Your next opportunity.
           </p>
+          <a
+            className="apply-document-link"
+            href="/apply/documents"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span>Driver Documents &amp; Policies</span>
+            <span aria-hidden="true">↗</span>
+          </a>
           <nav aria-label="Application progress">
             <ol>
               {[...steps.map((s) => s.title), "Review & sign"].map((s, i) => (
