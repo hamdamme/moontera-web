@@ -39,17 +39,17 @@ export default function DriversPage() {
             consistency, and dependable freight operations.
           </p>
 
-          <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+          <div className="mt-10 grid w-full max-w-[824px] grid-cols-1 gap-6 sm:grid-cols-2">
             <Link
               href="/apply"
-              className="rounded-full bg-blue-600 px-8 py-4 text-center text-sm font-bold text-white hover:bg-blue-700"
+              className="inline-flex min-h-20 w-full items-center justify-center rounded-2xl bg-blue-600 px-6 py-5 text-center text-lg font-bold text-white shadow-lg shadow-blue-950/30 transition-colors hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400"
             >
               Full Driver Application
             </Link>
 
             <Link
               href="/application/details"
-              className="rounded-full border-2 border-white bg-transparent px-8 py-4 text-sm font-bold text-white transition hover:bg-white hover:text-slate-950"
+              className="inline-flex min-h-20 w-full items-center justify-center rounded-2xl border-2 border-white bg-transparent px-6 py-5 text-center text-lg font-bold text-white transition-colors hover:bg-white hover:text-slate-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
             >
               Quick Application
             </Link>
