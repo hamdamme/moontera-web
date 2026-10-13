@@ -18,6 +18,7 @@ import {
   type Answers,
 } from "./schema";
 import "./application.css";
+import { submissionId } from "@/lib/applications/client";
 export default function Application() {
   const [answers, setAnswers] = useState<Answers>(initialAnswers);
   const [step, setStep] = useState(0);
@@ -25,6 +26,9 @@ export default function Application() {
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [receipt, setReceipt] = useState("");
+  const sending = useRef(false);
+  const pending = useRef<Record<string, unknown> | null>(null);
   const [signatureMode, setSignatureMode] = useState("type");
   const [signatureName, setSignatureName] = useState("");
   const [signatureImage, setSignatureImage] = useState("");
@@ -67,6 +71,7 @@ export default function Application() {
     });
   }
   function update(group: string, index: number, field: Field, value: string) {
+    if (pending.current) return;
     setDirty(true);
     setAnswers((a) => ({
       ...a,
@@ -103,6 +108,7 @@ export default function Application() {
       error = errors[id];
     const props = {
       id,
+      disabled: busy || !!pending.current,
       value,
       onChange: (
         e: React.ChangeEvent<
@@ -118,7 +124,11 @@ export default function Application() {
     };
     if (f.type === "yesno")
       return (
-        <fieldset className="apply-question" key={id}>
+        <fieldset
+          className="apply-question"
+          key={id}
+          disabled={busy || !!pending.current}
+        >
           <legend>
             {f.label}
             {f.required && <span aria-label="required"> *</span>}
@@ -280,7 +290,8 @@ export default function Application() {
       setSignatureImage(c.toDataURL("image/png"));
     }
   }
-  async function download() {
+  async function submitApplication() {
+    if (sending.current || receipt) return;
     setNotice("");
     for (let i = 0; i < steps.length; i++) {
       const e = validateStep(i, answers);
@@ -288,7 +299,7 @@ export default function Application() {
         setStep(i);
         setErrors(e);
         setNotice(
-          "Please complete the highlighted fields before creating your PDF.",
+          "Please complete the highlighted fields before submitting your application.",
         );
         return;
       }
@@ -303,48 +314,74 @@ export default function Application() {
       );
       return;
     }
+    sending.current = true;
     setBusy(true);
     try {
-      const [{ createApplicationPdf }, font] = await Promise.all([
-        import("./pdf"),
-        fetch("/fonts/Geist-Regular.ttf"),
-      ]);
-      if (!font.ok) throw Error("Font unavailable");
-      const bytes = await createApplicationPdf(
-        answers,
-        {
-          mode: signatureMode,
-          name: signatureName.trim(),
-          image: signatureImage,
-        },
-        await font.arrayBuffer(),
-      );
-      const blob = new Blob([new Uint8Array(bytes)], {
-        type: "application/pdf",
+      if (!pending.current)
+        pending.current = {
+          answers,
+          signature: {
+            mode: signatureMode,
+            name: signatureName.trim(),
+            image: signatureImage,
+          },
+          certified: agreed,
+          requestId: await submissionId("full", answers.personal[0].email),
+        };
+      const response = await fetch("/api/application/full", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pending.current),
       });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "Moontera-Driver-Application-Preview.pdf";
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        if (response.status === 400) pending.current = null;
+        throw Error(
+          result.message || "Could not submit your application. Please retry.",
+        );
+      }
+      setDirty(false);
+      setReceipt(result.id);
+    } catch (error) {
       setNotice(
-        "Your PDF was generated. It has not been submitted to Moontera.",
-      );
-    } catch {
-      setNotice(
-        "We could not generate the PDF. Your answers are still here. Please try again.",
+        error instanceof Error
+          ? error.message
+          : "Could not connect. Please retry the same submission.",
       );
     } finally {
+      sending.current = false;
       setBusy(false);
     }
   }
+  if (receipt)
+    return (
+      <main className="apply-shell" style={{ padding: "64px 24px" }}>
+        <section
+          className="apply-card"
+          style={{ maxWidth: 700, margin: "auto" }}
+        >
+          <h1>Application submitted</h1>
+          <p>
+            Thank you. Your Full Driver Application has been sent to Moontera
+            LLC. A confirmation email is on its way.
+          </p>
+          <p className="apply-card-description">Reference: {receipt}</p>
+          <p>
+            Please do not apply again. For corrections, contact{" "}
+            <a href="mailto:info@moonterallc.com">info@moonterallc.com</a>.
+          </p>
+          <a href="/drivers" className="apply-primary">
+            Return to driver opportunities
+          </a>
+        </section>
+      </main>
+    );
   const current = steps[step];
   return (
     <main className="apply-shell">
       <div className="apply-preview">
-        <span className="apply-dot" /> APPLICATION PREVIEW{" "}
-        <span>Use sample information. Nothing is submitted.</span>
+        <span className="apply-dot" /> DRIVER APPLICATION{" "}
+        <span>Submit once. Receive your confirmation by email.</span>
       </div>
       <div className="apply-layout">
         <aside className="apply-sidebar">
@@ -365,7 +402,7 @@ export default function Application() {
                 <li key={s}>
                   <button
                     type="button"
-                    disabled={i > step}
+                    disabled={i > step || busy || !!pending.current}
                     aria-current={step === i ? "step" : undefined}
                     className={
                       step === i ? "active" : i < step ? "complete" : ""
@@ -413,7 +450,7 @@ export default function Application() {
             </h2>
             <p>
               {current?.description ||
-                "Check your answers before generating your application preview."}
+                "Check your answers and submit your application to our team."}
             </p>
           </header>
           <div className="apply-session">
@@ -459,6 +496,7 @@ export default function Application() {
                             <button
                               type="button"
                               className="apply-link"
+                              disabled={busy || !!pending.current}
                               onClick={() => {
                                 setAnswers((a) => ({
                                   ...a,
@@ -482,6 +520,7 @@ export default function Application() {
                   ))}
                   {g.repeat && (
                     <button
+                      disabled={busy || !!pending.current}
                       className="apply-add"
                       type="button"
                       onClick={() => {
@@ -521,6 +560,7 @@ export default function Application() {
                     <button
                       className="apply-link"
                       type="button"
+                      disabled={busy || !!pending.current}
                       onClick={() => go(i)}
                     >
                       Edit {s.title.toLowerCase()}
@@ -562,14 +602,24 @@ export default function Application() {
               <section className="apply-card">
                 <h3>Separate authorizations</h3>
                 <p className="apply-card-description">
-                  Review MVR and PSP authorizations, company policies, and an optional
-                  passenger request. Each document has its own signature preview.
-                  This preview does not authorize or request background reports.
+                  Review MVR and PSP authorizations, company policies, and an
+                  optional passenger request. Each document has its own
+                  signature preview. This preview does not authorize or request
+                  background reports.
                 </p>
               </section>
               <section className="apply-card">
-                <a href="/apply/documents" target="_blank" rel="noreferrer" style={{ color: "#2364df", fontWeight: 700 }}>Review authorizations & policies ↗</a>
-                <p className="apply-card-description">Opens in a new tab so your application answers stay here.</p>
+                <a
+                  href="/apply/documents"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "#2364df", fontWeight: 700 }}
+                >
+                  Review authorizations & policies ↗
+                </a>
+                <p className="apply-card-description">
+                  Opens in a new tab so your application answers stay here.
+                </p>
               </section>
               <section className="apply-card">
                 <h3>Applicant certification</h3>
@@ -649,8 +699,10 @@ export default function Application() {
                   </>
                 )}
                 <p className="apply-card-description">
-                  Signature preview only. Verified electronic signing and a
-                  signing audit trail are not connected yet.
+                  By submitting, you adopt this typed or drawn signature as your
+                  electronic signature for the application certification.
+                  Separate background authorizations are completed
+                  independently.
                 </p>
               </section>
               <div className="apply-actions">
@@ -665,14 +717,19 @@ export default function Application() {
                   type="button"
                   className="apply-primary"
                   disabled={busy}
-                  onClick={download}
+                  onClick={submitApplication}
                 >
-                  {busy ? "Creating PDF…" : "Download application PDF"}{" "}
-                  <span>↓</span>
+                  {busy
+                    ? "Submitting…"
+                    : pending.current
+                      ? "Retry submission"
+                      : "Submit Full Driver Application"}{" "}
+                  <span>→</span>
                 </button>
               </div>
               <p className="apply-download-note">
-                Downloads to your device. This does not submit an application.
+                Your application is sent directly to our team. We’ll email you a
+                confirmation; no PDF download is required.
               </p>
             </>
           )}

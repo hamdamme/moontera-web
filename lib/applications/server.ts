@@ -1,0 +1,201 @@
+import { createHmac } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { get, put, BlobPreconditionFailedError } from "@vercel/blob";
+import { Resend } from "resend";
+import { InputError, validateSubmission } from "./model";
+import {
+  processSubmission,
+  SubmissionError,
+  type RecordData,
+  type Store,
+} from "./workflow";
+import { createSubmissionPdf } from "./submission-pdf";
+
+const store: Store = {
+  async read(key) {
+    const result = await get(key, { access: "private", useCache: false });
+    if (!result) return null;
+    if (result.statusCode !== 200) throw Error("Storage read failed");
+    return {
+      record: (await new Response(result.stream).json()) as RecordData,
+      version: result.blob.etag,
+    };
+  },
+  async create(key, record) {
+    try {
+      const result = await put(key, JSON.stringify(record), {
+        access: "private",
+        addRandomSuffix: false,
+        allowOverwrite: false,
+        contentType: "application/json",
+      });
+      return { record, version: result.etag };
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        /already exists|precondition/i.test(error.message)
+      )
+        return null;
+      throw error;
+    }
+  },
+  async save(key, record, version) {
+    try {
+      const result = await put(key, JSON.stringify(record), {
+        access: "private",
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        ifMatch: version,
+        contentType: "application/json",
+      });
+      return { record, version: result.etag };
+    } catch (error) {
+      if (error instanceof BlobPreconditionFailedError) return null;
+      throw error;
+    }
+  },
+};
+function reply(body: unknown, status = 200) {
+  return Response.json(body, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+export async function handleApplication(
+  request: Request,
+  kind: "quick" | "full",
+) {
+  try {
+    const origin = request.headers.get("origin");
+    if (
+      origin &&
+      ![
+        "https://www.moonterallc.com",
+        "https://moonterallc.com",
+        new URL(request.url).origin,
+      ].includes(origin)
+    )
+      return reply({ success: false, message: "Invalid request origin." }, 403);
+    if (!request.headers.get("content-type")?.includes("application/json"))
+      return reply(
+        { success: false, message: "Send application data as JSON." },
+        415,
+      );
+    if (Number(request.headers.get("content-length")) > 750000)
+      return reply(
+        { success: false, message: "Application is too large." },
+        413,
+      );
+    // Bound the streamed body too: Content-Length alone is not a reliable limit.
+    const reader = request.body?.getReader();
+    if (!reader) throw new InputError("Missing application.");
+    const chunks: Uint8Array[] = [];
+    let length = 0;
+    while (true) {
+      const part = await reader.read();
+      if (part.done) break;
+      length += part.value.length;
+      if (length > 750000) {
+        await reader.cancel();
+        return reply(
+          { success: false, message: "Application is too large." },
+          413,
+        );
+      }
+      chunks.push(part.value);
+    }
+    let input: unknown;
+    try {
+      input = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    } catch {
+      throw new InputError("Invalid application data.");
+    }
+    const payload = validateSubmission(kind, input);
+    if (
+      !process.env.RESEND_API_KEY ||
+      !process.env.BLOB_READ_WRITE_TOKEN ||
+      !process.env.APPLICATION_KEY_SECRET
+    )
+      return reply(
+        {
+          success: false,
+          message:
+            "Applications are temporarily unavailable. Please contact info@moonterallc.com.",
+        },
+        503,
+      );
+    const key = `applications/${kind}/${createHmac("sha256", process.env.APPLICATION_KEY_SECRET).update(payload.email).digest("hex")}.json`;
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const result = await processSubmission(key, payload, {
+      store,
+      pdf: async (submission, id, date) => {
+        const [font, template] = await Promise.all([
+          readFile(path.join(process.cwd(), "public/fonts/Geist-Regular.ttf")),
+          readFile(
+            path.join(process.cwd(), "assets/application-reference.pdf"),
+          ),
+        ]);
+        return createSubmissionPdf(submission, id, date, font, template);
+      },
+      send: async (record, recipient) => {
+        const title =
+          record.payload.kind === "quick"
+            ? "Quick Application"
+            : "Full Driver Application";
+        const from =
+          process.env.APPLICATION_FROM || "Moontera LLC <info@moonterallc.com>";
+        const owner = recipient === "owner";
+        const { data, error } = await resend.emails.send(
+          {
+            from,
+            to: [owner ? "llcmoontera@gmail.com" : record.payload.email],
+            replyTo: owner ? record.payload.email : "info@moonterallc.com",
+            subject: owner
+              ? `New ${title} - ${record.payload.name}`
+              : `${title} submitted - Moontera LLC`,
+            text: owner
+              ? `${record.payload.name} submitted a ${title.toLowerCase()}.\n\nThe completed application is attached as a PDF.\nReference: ${record.id}\nReceived: ${record.createdAt}\nContact: ${record.payload.email}`
+              : `Hello ${record.payload.name},\n\nYour ${title.toLowerCase()} has been submitted to Moontera LLC. Our team will review it and contact you if more information is needed. You do not need to submit this application again.\n\nReference: ${record.id}\n\nQuestions or corrections? Contact info@moonterallc.com or 773-882-5595.\n\nMoontera LLC`,
+            ...(owner
+              ? {
+                  attachments: [
+                    {
+                      filename: `Moontera-${record.payload.kind}-application-${record.id.slice(0, 8)}.pdf`,
+                      content: record.pdf,
+                    },
+                  ],
+                }
+              : {}),
+          },
+          { idempotencyKey: `application/${record.id}/${recipient}` },
+        );
+        if (error || !data?.id)
+          throw Error("Email provider did not accept message");
+        return data.id;
+      },
+    });
+    return reply({
+      success: true,
+      ...result,
+      message: "Application submitted. A confirmation email has been sent.",
+    });
+  } catch (error) {
+    if (error instanceof InputError)
+      return reply({ success: false, message: error.message }, 400);
+    if (error instanceof SubmissionError)
+      return reply({ success: false, message: error.message }, error.status);
+    console.error(
+      "Application intake failed",
+      error instanceof Error ? error.name : "Unknown error",
+    );
+    return reply(
+      {
+        success: false,
+        message:
+          "We could not complete your submission. Please retry; repeated attempts will not create another application.",
+      },
+      503,
+    );
+  }
+}

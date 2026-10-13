@@ -51,7 +51,7 @@ export default function DriversPage() {
               href="/application/details"
               className="rounded-full border-2 border-white bg-transparent px-8 py-4 text-sm font-bold text-white transition hover:bg-white hover:text-slate-950"
             >
-              General Application
+              Quick Application
             </Link>
           </div>
         </div>
@@ -81,9 +81,9 @@ export default function DriversPage() {
                 className="rounded-[2rem] border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
               >
                 <p className="text-lg font-bold leading-7 text-slate-900">
-  <span className="mr-2 text-blue-600">✓</span>
-  {item}
-</p>
+                  <span className="mr-2 text-blue-600">✓</span>
+                  {item}
+                </p>
               </div>
             ))}
           </div>
@@ -141,9 +141,9 @@ export default function DriversPage() {
                 Complete your driver application
               </h3>
               <p className="mt-4 leading-7 text-slate-300">
-                Complete your personal details, work history, and driving record,
-                then review authorizations and company policies. Currently
-                available as a preview; submissions are not yet enabled.
+                Complete your personal details, work history, and driving
+                record, then review authorizations and company policies. Receive
+                an email confirmation after submitting.
               </p>
 
               <Link
@@ -156,14 +156,15 @@ export default function DriversPage() {
 
             <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8">
               <p className="text-sm font-bold text-blue-400">
-                General Application
+                Quick Application
               </p>
               <h3 className="mt-4 text-2xl font-bold">
-                Share your qualification details
+                Start with your contact details
               </h3>
               <p className="mt-4 leading-7 text-slate-300">
-                Use this option if you are ready to provide CDL, medical card,
-                DOT testing, and Clearinghouse consent information.
+                Provide your name, contact information, preferred position, and
+                availability. Complete qualification details in the Full Driver
+                Application.
               </p>
 
               <Link
@@ -171,7 +172,7 @@ export default function DriversPage() {
                 //className="mt-8 inline-flex rounded-full bg-white px-8 py-4 text-sm font-bold text-slate-950 hover:bg-slate-200"
                 className="mt-8 inline-flex rounded-full bg-blue-600 px-8 py-4 text-sm font-bold text-white hover:bg-blue-700"
               >
-                General Application
+                Quick Application
               </Link>
             </div>
           </div>

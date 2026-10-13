@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  outputFileTracingIncludes: {
+    "/api/application/*": [
+      "./assets/application-reference.pdf",
+      "./public/fonts/Geist-Regular.ttf",
+    ],
+  },
 };
 
 export default nextConfig;

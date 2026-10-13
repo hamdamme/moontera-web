@@ -67,7 +67,12 @@ export const steps: Step[] = [
           f("middle", "Middle name"),
           f("last", "Last name", "text", true),
           f("position", "Position applied for", "select", true, {
-            options: ["Company driver", "Owner operator", "Other"],
+            options: [
+              "Company driver",
+              "Owner operator",
+              "Lease driver",
+              "Other",
+            ],
           }),
           f("otherPosition", "Other position", "text", true, {
             when: ["position", "Other"],
@@ -75,9 +80,7 @@ export const steps: Step[] = [
           f("dob", "Date of birth", "date", true, { past: true }),
           f("phone", "Phone number", "phone", true),
           f("email", "Email address", "email", true),
-          f("ssn", "Social Security number", "ssn", false, {
-            hint: "Optional in this preview. Use sample information only.",
-          }),
+          f("startDate", "Available start date", "date", true),
           f("referral", "Who referred you?"),
         ],
       },
@@ -330,6 +333,37 @@ export const steps: Step[] = [
       "Tell us about the equipment you’ve operated and complete the testing disclosure.",
     groups: [
       {
+        key: "medical",
+        title: "Medical card & DOT information",
+        fields: [
+          f("expires", "Medical card expiration date", "date", true),
+          f("lastTest", "Last drug and alcohol test date", "date", false, {
+            past: true,
+            hint: "Leave empty if you have not previously taken a DOT test.",
+          }),
+        ],
+      },
+      {
+        key: "clearinghouse",
+        title: "FMCSA Drug & Alcohol Clearinghouse consent",
+        description:
+          "I authorize Moontera LLC to conduct required FMCSA Drug & Alcohol Clearinghouse queries as permitted under 49 CFR Part 382, including pre-employment and annual limited queries. I understand that full queries, including the pre-employment full query, require my separate electronic consent in the FMCSA Clearinghouse portal. Refusal to provide required consent may prevent me from performing safety-sensitive duties, including operating a commercial motor vehicle.",
+        fields: [
+          f("consent", "Clearinghouse acknowledgment", "select", true, {
+            options: ["I have read and agree"],
+          }),
+          f("signature", "Typed full name / consent signature", "text", true),
+          f("date", "Consent date", "date", true, { past: true }),
+        ],
+      },
+      {
+        key: "communications",
+        title: "Optional SMS consent",
+        description:
+          "I consent to receive conversational and informational SMS messages from Moontera LLC regarding my inquiry. Reply STOP to opt out or HELP for support. Message and data rates may apply. Messaging frequency may vary. SMS consent is optional and is not required to apply. See our Privacy Policy and Terms of Use in the footer.",
+        fields: [f("sms", "May we send you SMS updates?", "yesno", false)],
+      },
+      {
         key: "experience",
         title: "Driving experience",
         repeat: true,
@@ -513,6 +547,8 @@ export function validateStep(step: number, a: Answers) {
         let e = "";
         if (f.required && !v) e = "Please complete this field.";
         else if (v) {
+          if (f.type === "number" && !/^\d{1,9}$/.test(v))
+            e = "Enter a whole number using digits only.";
           if (f.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))
             e = "Enter a valid email address.";
           if (f.type === "phone" && !/^\d{3}-\d{3}-\d{4}$/.test(v))
