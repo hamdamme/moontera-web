@@ -63,6 +63,15 @@ export default function QuickApplication() {
             Start with your contact details and the role you’re interested in.
             We’ll email you a confirmation after you apply.
           </p>
+          <a
+            className="apply-document-link"
+            href="/apply/documents"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span>Driver Documents &amp; Policies</span>
+            <span aria-hidden="true">↗</span>
+          </a>
           <div className="apply-help">
             <a href="tel:+17738825595">773-882-5595</a>
             <a href="mailto:info@moonterallc.com">info@moonterallc.com</a>
