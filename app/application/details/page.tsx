@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function FullApplicationPage() {
+export default function GeneralApplicationPage() {
   const [status, setStatus] = useState("");
   const router = useRouter();
   const [generalInfo, setGeneralInfo] = useState({
@@ -91,11 +91,11 @@ export default function FullApplicationPage() {
 
         <div className="relative mx-auto max-w-7xl">
           <p className="text-sm font-bold uppercase tracking-[0.3em] text-blue-400">
-            Full Driver Application
+            General Application
           </p>
 
           <h1 className="mt-4 max-w-4xl text-5xl font-bold tracking-tight md:text-6xl">
-            Complete Driver Qualification Form
+            General Driver Application
           </h1>
 
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
@@ -473,14 +473,14 @@ export default function FullApplicationPage() {
               type="submit"
               className="rounded-full bg-blue-600 px-8 py-4 text-sm font-bold text-white hover:bg-blue-700"
             >
-              Submit Complete Application
+              Submit General Application
             </button>
 
             <a
-              href="/application"
+              href="/apply"
               className="rounded-full border border-slate-300 px-8 py-4 text-center text-sm font-bold text-slate-900 hover:border-blue-600 hover:text-blue-600"
             >
-              Back to Quick Application
+              Open Full Driver Application
             </a>
           </div>
 

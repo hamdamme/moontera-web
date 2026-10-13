@@ -41,17 +41,17 @@ export default function DriversPage() {
 
           <div className="mt-10 flex flex-col gap-4 sm:flex-row">
             <Link
-              href="/application"
+              href="/apply"
               className="rounded-full bg-blue-600 px-8 py-4 text-center text-sm font-bold text-white hover:bg-blue-700"
             >
-              Quick Apply
+              Full Driver Application
             </Link>
 
             <Link
               href="/application/details"
-              className="rounded-full border-2 border-white bg-transparent px-8 py-4 text-sm font-bold text-white transition hover: hover:text-slate-950"
+              className="rounded-full border-2 border-white bg-transparent px-8 py-4 text-sm font-bold text-white transition hover:bg-white hover:text-slate-950"
             >
-              Full Application
+              General Application
             </Link>
           </div>
         </div>
@@ -135,30 +135,31 @@ export default function DriversPage() {
           <div className="mt-12 grid gap-6 md:grid-cols-2">
             <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8">
               <p className="text-sm font-bold text-blue-400">
-                Quick Application
+                Full Driver Application
               </p>
               <h3 className="mt-4 text-2xl font-bold">
-                Submit basic information
+                Complete your driver application
               </h3>
               <p className="mt-4 leading-7 text-slate-300">
-                Use this option if you want Moontera LLC to contact you first
-                before completing detailed driver qualification information.
+                Complete your personal details, work history, and driving record,
+                then review authorizations and company policies. Currently
+                available as a preview; submissions are not yet enabled.
               </p>
 
               <Link
-                href="/application"
+                href="/apply"
                 className="mt-8 inline-flex rounded-full bg-blue-600 px-8 py-4 text-sm font-bold text-white hover:bg-blue-700"
               >
-                Quick Apply
+                Full Driver Application
               </Link>
             </div>
 
             <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8">
               <p className="text-sm font-bold text-blue-400">
-                Full Application
+                General Application
               </p>
               <h3 className="mt-4 text-2xl font-bold">
-                Complete driver qualification details
+                Share your qualification details
               </h3>
               <p className="mt-4 leading-7 text-slate-300">
                 Use this option if you are ready to provide CDL, medical card,
@@ -170,7 +171,7 @@ export default function DriversPage() {
                 //className="mt-8 inline-flex rounded-full bg-white px-8 py-4 text-sm font-bold text-slate-950 hover:bg-slate-200"
                 className="mt-8 inline-flex rounded-full bg-blue-600 px-8 py-4 text-sm font-bold text-white hover:bg-blue-700"
               >
-                Full Application
+                General Application
               </Link>
             </div>
           </div>
