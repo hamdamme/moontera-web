@@ -1,3 +1,4 @@
+import { formatPhone, formatZip, formatSsn, normalizeCdl } from "../../lib/applications/smart-fields";
 export type Field = {
   key: string;
   label: string;
@@ -501,19 +502,11 @@ export function formatValue(f: Field, v: string) {
       .filter(Boolean)
       .join("/");
   }
-  if (f.type === "ssn") {
-    const d = v.replace(/\D/g, "").slice(0, 9);
-    return [d.slice(0, 3), d.slice(3, 5), d.slice(5)].filter(Boolean).join("-");
-  }
-  if (f.type === "phone") {
-    const d = v.replace(/\D/g, "").slice(0, 10);
-    return [d.slice(0, 3), d.slice(3, 6), d.slice(6)].filter(Boolean).join("-");
-  }
+  if (f.type === "ssn") return formatSsn(v);
+  if (f.type === "phone") return formatPhone(v);
   if (f.type === "number") return v.replace(/\D/g, "").slice(0, 9);
-  if (f.key === "zip") {
-    const d = v.replace(/\D/g, "").slice(0, 9);
-    return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
-  }
+  if (f.key === "zip") return formatZip(v);
+  if (f.key === "number" && f.label.toLowerCase().includes("license")) return normalizeCdl(v);
   return v;
 }
 export function dateKey(value: string, month = false): string | null {
