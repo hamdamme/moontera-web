@@ -3,6 +3,7 @@ import { put, BlobPreconditionFailedError } from "@vercel/blob";
 import { Resend } from "resend";
 import { publicScreeningKey } from "@/lib/screening/invite";
 import documents from "@/app/apply/documents/documents.json";
+import { createScreeningPdf } from "@/lib/screening/pdf";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -89,19 +90,29 @@ export async function POST(request: Request) {
         return respond({message:"A screening form has already been received for this email. Contact Moontera LLC to make corrections."},409);
       throw e;
     }
-    // The private record is the source of truth. Email contains no CDL, DOB, or signature data.
+    // The saved private record remains authoritative even if email delivery fails.
     try {
-      const resend=new Resend(process.env.RESEND_API_KEY);
-      await resend.emails.send({
+      const pdf = await createScreeningPdf(record);
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const { data, error } = await resend.emails.send({
         from: process.env.APPLICATION_FROM || "Moontera LLC <info@moonterallc.com>",
-        to:["llcmoontera@gmail.com"],
-        subject:"Driver screening received - "+name,
-        text:"A driver screening form was received.\n\nReference: "+id+"\nDriver: "+name+
-          "\nEmail: "+email+"\nReceived: "+createdAt+
-          "\n\nReview the private screening record through authorized Vercel storage administration. Do not forward sensitive records by email."
-      },{idempotencyKey:"screening/"+id+"/owner"});
-    } catch { console.error("Screening saved; notification email failed"); }
-    return respond({reference:id,success:true});
+        to: ["llcmoontera@gmail.com"],
+        replyTo: email,
+        subject: "Driver screening received - " + name,
+        text: "Driver screening submitted.\\nReference: " + id + "\\nDriver: " + name +
+          "\\nEmail: " + email + "\\nReceived: " + createdAt +
+          "\\n\\nThe completed screening and MVR/PSP authorizations are attached.",
+        attachments: [{ filename: "moontera-driver-screening-" + id + ".pdf", content: Buffer.from(pdf) }]
+      }, { idempotencyKey: "screening/pdf/" + id + "/owner" });
+      if (error || !data?.id) throw Error("Email service did not confirm sending.");
+      return respond({ reference: id, success: true, emailSent: true });
+    } catch {
+      console.error("Screening saved but PDF email delivery failed", id);
+      return respond({
+        reference: id, success: true, emailSent: false,
+        message: "Your screening was saved, but the PDF email could not be delivered. Contact Moontera LLC with this reference."
+      });
+    }
   }catch(error){
     if(error instanceof Invalid) return respond({message:error.message},400);
     if(error instanceof SyntaxError) return respond({message:"Invalid form data."},400);
