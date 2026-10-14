@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState, type FormEvent } from "react";
-import { quickFields, positions } from "@/lib/applications/model";
+import { quickFields, positions, cdlClasses, drugTestStatuses } from "@/lib/applications/model";
+import { states } from "@/app/apply/schema";
 import { submissionId } from "@/lib/applications/client";
 import "../../apply/application.css";
 
@@ -8,6 +9,7 @@ export default function QuickApplication() {
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState(""),
     [receipt, setReceipt] = useState("");
+  const [drugTestStatus, setDrugTestStatus] = useState("");
   const sending = useRef(false);
   const pending = useRef<Record<string, unknown> | null>(null);
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -22,6 +24,7 @@ export default function QuickApplication() {
         const quick = Object.fromEntries(
           quickFields.map((f) => [f.key, String(data.get(f.key) || "").trim()]),
         );
+        if (quick.drug_test_status !== "Date known") quick.drug_test_date = "";
         pending.current = {
           quick,
           requestId: await submissionId("quick", quick.email),
@@ -63,15 +66,6 @@ export default function QuickApplication() {
             Start with your contact details and the role you’re interested in.
             We’ll email you a confirmation after you apply.
           </p>
-          <a
-            className="apply-document-link"
-            href="/apply/documents"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <span>Driver Documents &amp; Policies</span>
-            <span aria-hidden="true">↗</span>
-          </a>
           <div className="apply-help">
             <a href="tel:+17738825595">773-882-5595</a>
             <a href="mailto:info@moonterallc.com">info@moonterallc.com</a>
@@ -91,63 +85,74 @@ export default function QuickApplication() {
                 Please do not submit this application again. Contact us if you
                 need to make a correction.
               </p>
-              <a href="/apply" className="apply-primary">
-                Continue to Full Driver Application →
+              <a href="/drivers" className="apply-primary">
+                Return to driver opportunities →
               </a>
             </div>
           ) : (
             <form onSubmit={submit}>
               <div className="apply-card">
-                <h2>General information</h2>
-                <p className="apply-card-description">
-                  All fields are required. No Social Security number is
-                  requested.
-                </p>
-                <fieldset
-                  disabled={busy || !!pending.current}
-                  style={{ border: 0, padding: 0, margin: 0 }}
-                >
+                <h2>Contact information</h2>
+                <p className="apply-card-description">Provide your legal name, contact details, address, and availability.</p>
+                <fieldset disabled={busy || !!pending.current} className="quick-fieldset">
                   <div className="apply-grid">
-                    {quickFields.map((field) => (
+                    {quickFields.slice(0, 8).map((field) => (
                       <div className="apply-field" key={field.key}>
                         <label htmlFor={field.key}>{field.label} *</label>
-                        {field.type === "select" ? (
-                          <select
-                            id={field.key}
-                            name={field.key}
-                            required
-                            defaultValue=""
-                          >
+                        {field.key === "position" ? (
+                          <select id={field.key} name={field.key} required defaultValue="">
                             <option value="">Select a position</option>
-                            {positions.map((p) => (
-                              <option key={p}>{p}</option>
-                            ))}
+                            {positions.map((position) => <option key={position} value={position}>{position}</option>)}
                           </select>
                         ) : (
-                          <input
-                            id={field.key}
-                            name={field.key}
-                            type={field.type}
-                            required
-                            maxLength={field.type === "email" ? 254 : 300}
-                            max={
-                              field.key === "dob"
-                                ? new Date().toISOString().slice(0, 10)
-                                : undefined
-                            }
-                            autoComplete={
-                              field.key === "email"
-                                ? "email"
-                                : field.key === "phone"
-                                  ? "tel"
-                                  : field.key === "full_name"
-                                    ? "name"
-                                    : undefined
-                            }
-                          />
+                          <input id={field.key} name={field.key} type={field.type} required maxLength={field.key === "email" ? 254 : 300}
+                            max={field.key === "dob" ? new Date().toISOString().slice(0, 10) : undefined}
+                            autoComplete={field.key === "email" ? "email" : field.key === "phone" ? "tel" : field.key === "full_name" ? "name" : undefined} />
                         )}
                       </div>
                     ))}
+                  </div>
+                </fieldset>
+              </div>
+              <div className="apply-card">
+                <h2>Commercial driver's license</h2>
+                <p className="apply-card-description">Enter the details exactly as shown on your CDL.</p>
+                <fieldset disabled={busy || !!pending.current} className="quick-fieldset">
+                  <div className="apply-grid">
+                    <div className="apply-field"><label htmlFor="cdl_number">CDL number *</label><input id="cdl_number" name="cdl_number" type="text" required maxLength={40} autoComplete="off" /></div>
+                    <div className="apply-field"><label htmlFor="cdl_state">CDL issuing state *</label><select id="cdl_state" name="cdl_state" required defaultValue=""><option value="">Select state</option>{states.map(state => <option key={state} value={state}>{state}</option>)}</select></div>
+                    <div className="apply-field"><label htmlFor="cdl_class">CDL class *</label><select id="cdl_class" name="cdl_class" required defaultValue=""><option value="">Select class</option>{cdlClasses.map(cdlClass => <option key={cdlClass} value={cdlClass}>{cdlClass}</option>)}</select></div>
+                    <div className="apply-field"><label htmlFor="cdl_expiration">CDL expiration date *</label><input id="cdl_expiration" name="cdl_expiration" type="date" required /></div>
+                  </div>
+                </fieldset>
+              </div>
+              <div className="apply-card">
+                <h2>DOT medical certification</h2>
+                <fieldset disabled={busy || !!pending.current} className="quick-fieldset">
+                  <div className="apply-grid">
+                    <div className="apply-field"><label htmlFor="medical_card_issue">DOT medical card issue date *</label><input id="medical_card_issue" name="medical_card_issue" type="date" required max={new Date().toISOString().slice(0, 10)} /></div>
+                    <div className="apply-field"><label htmlFor="medical_card_expiration">DOT medical card expiration date *</label><input id="medical_card_expiration" name="medical_card_expiration" type="date" required /></div>
+                  </div>
+                </fieldset>
+              </div>
+              <div className="apply-card">
+                <h2>DOT drug testing history</h2>
+                <p className="apply-card-description">When was your last DOT drug test? This information does not replace required pre-employment testing.</p>
+                <fieldset disabled={busy || !!pending.current} className="quick-fieldset">
+                  <div className="apply-grid">
+                    <div className="apply-field"><label htmlFor="drug_test_status">Last DOT drug test *</label><select id="drug_test_status" name="drug_test_status" required value={drugTestStatus} onChange={e => setDrugTestStatus(e.target.value)}>
+                      <option value="">Select an option</option>{drugTestStatuses.map(status => <option key={status} value={status}>{status}</option>)}
+                    </select></div>
+                    {drugTestStatus === "Date known" && <div className="apply-field"><label htmlFor="drug_test_date">Date of last DOT drug test *</label><input id="drug_test_date" name="drug_test_date" type="date" max={new Date().toISOString().slice(0, 10)} required /></div>}
+                  </div>
+                </fieldset>
+              </div>
+              <div className="apply-card">
+                <h2>Optional identification</h2>
+                <p className="apply-card-description">You may leave this blank. Do not enter your full Social Security number.</p>
+                <fieldset disabled={busy || !!pending.current} className="quick-fieldset">
+                  <div className="apply-grid">
+                    <div className="apply-field"><label htmlFor="ssn_last4">Last four digits of SSN (optional)</label><input id="ssn_last4" name="ssn_last4" type="text" inputMode="numeric" pattern="[0-9]{4}" minLength={4} maxLength={4} autoComplete="off" /></div>
                   </div>
                 </fieldset>
               </div>
