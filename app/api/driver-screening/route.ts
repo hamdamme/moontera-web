@@ -13,6 +13,7 @@ const respond = (data: unknown, status = 200) =>
   Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
 function val(data: Record<string, unknown>, key: string, max = 200, required = true): string {
   const value = data[key];
+  if ((value === undefined || value === null) && !required) return "";
   if (typeof value !== "string" || value.length > max || /[\x00-\x1f]/.test(value))
     throw new Invalid("Invalid " + key + " field.");
   const cleaned = value.trim();
