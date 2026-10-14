@@ -4,6 +4,7 @@ import {
   visible,
   validateStep,
   dateKey,
+  states,
   type Answers,
 } from "../../app/apply/schema";
 export const quickFields = [
@@ -30,7 +31,18 @@ export const quickFields = [
     type: "date",
     required: true,
   },
+  { key: "cdl_number", label: "CDL number", type: "text", required: true },
+  { key: "cdl_state", label: "CDL issuing state", type: "select", required: true },
+  { key: "cdl_class", label: "CDL class", type: "select", required: true },
+  { key: "cdl_expiration", label: "CDL expiration date", type: "date", required: true },
+  { key: "medical_card_issue", label: "DOT medical card issue date", type: "date", required: true },
+  { key: "medical_card_expiration", label: "DOT medical card expiration date", type: "date", required: true },
+  { key: "drug_test_status", label: "Last DOT drug test", type: "select", required: true },
+  { key: "drug_test_date", label: "Date of last DOT drug test", type: "date", required: false },
+  { key: "ssn_last4", label: "Last four SSN digits", type: "text", required: false },
 ] as const;
+export const cdlClasses = ["Class A", "Class B", "Class C"] as const;
+export const drugTestStatuses = ["Date known", "Unknown", "Never tested"] as const;
 export const positions = [
   "Company driver",
   "Owner operator",
@@ -90,21 +102,41 @@ export function validateSubmission(
     for (const field of quickFields)
       quick[field.key] = text(
         raw[field.key],
-        field.key === "email" ? 254 : 300,
-        true,
+        field.key === "email" ? 254 : field.key === "cdl_number" ? 40 : field.key === "ssn_last4" ? 4 : 300,
+        field.required || (field.key === "drug_test_date" && raw.drug_test_status === "Date known"),
       );
     if (!positions.includes(quick.position))
       throw new InputError("Choose a valid position.");
-    for (const key of ["dob", "start_date"]) {
+    if (!quick.cdl_number || quick.cdl_number.length < 3)
+      throw new InputError("Enter a valid CDL number.");
+    if (!states.includes(quick.cdl_state))
+      throw new InputError("Choose the CDL issuing state.");
+    if (!cdlClasses.some((value) => value === quick.cdl_class))
+      throw new InputError("Choose the CDL class.");
+    if (!drugTestStatuses.some((value) => value === quick.drug_test_status))
+      throw new InputError("Choose the last DOT drug test status.");
+    if (quick.ssn_last4 && !/^\d{4}$/.test(quick.ssn_last4))
+      throw new InputError("Enter exactly four SSN digits, or leave it blank.");
+    if (quick.drug_test_status !== "Date known" && quick.drug_test_date)
+      throw new InputError("Provide a drug test date only when the date is known.");
+    for (const key of ["dob", "start_date", "cdl_expiration", "medical_card_issue", "medical_card_expiration", "drug_test_date"]) {
       const v = quick[key];
+      if (!v && key === "drug_test_date") continue;
       if (
         !/^\d{4}-\d{2}-\d{2}$/.test(v) ||
         !dateKey(`${v.slice(5, 7)}/${v.slice(8)}/${v.slice(0, 4)}`)
       )
         throw new InputError("Enter valid dates.");
     }
-    if (quick.dob > new Date().toISOString().slice(0, 10))
+    const today = new Date().toISOString().slice(0, 10);
+    if (quick.dob > today)
       throw new InputError("Date of birth cannot be in the future.");
+    if (quick.medical_card_issue > today)
+      throw new InputError("Medical card issue date cannot be in the future.");
+    if (quick.medical_card_expiration < quick.medical_card_issue)
+      throw new InputError("Medical card expiration must follow its issue date.");
+    if (quick.drug_test_date && quick.drug_test_date > today)
+      throw new InputError("Last drug test date cannot be in the future.");
     if (!/^\+?1?\d{10}$/.test(quick.phone.replace(/[\s().-]/g, "")))
       throw new InputError("Enter a valid phone number.");
     result = {
