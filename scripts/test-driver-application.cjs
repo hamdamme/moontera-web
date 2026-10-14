@@ -51,10 +51,45 @@ const raw = {
     email: "ALEX@example.com",
     position: "Company driver",
     start_date: "2026-11-01",
+    cdl_number: "IL12345678",
+    cdl_state: "IL",
+    cdl_class: "Class A",
+    cdl_expiration: "2028-11-01",
+    medical_card_issue: "2026-02-01",
+    medical_card_expiration: "2028-02-01",
+    drug_test_status: "Date known",
+    drug_test_date: "2026-01-15",
+    ssn_last4: "",
   },
 };
 const quick = validateSubmission("quick", raw);
 assert.equal(quick.email, "alex@example.com");
+assert.equal(quick.quick.cdl_state, "IL");
+assert.equal(quick.quick.drug_test_date, "2026-01-15");
+for (const [key, value] of [
+  ["cdl_state", "XX"],
+  ["cdl_class", "Class Z"],
+  ["cdl_number", ""],
+  ["medical_card_issue", "2026-02-30"],
+  ["medical_card_expiration", "2025-01-01"],
+  ["drug_test_date", "2026-02-30"],
+  ["ssn_last4", "12345"],
+  ["ssn_last4", "123"],
+]) {
+  assert.throws(() => validateSubmission("quick", {
+    ...raw,
+    quick: { ...raw.quick, [key]: value },
+  }), `Invalid ${key} should fail`);
+}
+assert.throws(() => validateSubmission("quick", {
+  ...raw, quick: { ...raw.quick, drug_test_date: "", drug_test_status: "Date known" },
+}));
+for (const status of ["Unknown", "Never tested"]) {
+  const result = validateSubmission("quick", {
+    ...raw, quick: { ...raw.quick, drug_test_status: status, drug_test_date: "" },
+  });
+  assert.equal(result.quick.drug_test_date, "");
+}
 assert.throws(() =>
   validateSubmission("quick", {
     ...raw,
