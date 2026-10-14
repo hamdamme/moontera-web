@@ -81,17 +81,17 @@ export default function ScreeningForm({ invite, email }: { invite: string; email
       <section className="screening-card"><h2>4. Motor Vehicle Record (MVR) authorization</h2>
         <p className="screening-note">MVR checks are performed through MVRcheck.com.</p>
         {mvr.sections.map((s,i)=><div className="screening-legal" key={i}><h3>{s.title}</h3>{s.body.split("\n\n").map((t,j)=><p key={j}>{t}</p>)}</div>)}
-        <label className="screening-checkbox"><input type="checkbox" checked={mvrAgree} onChange={e=>setMvrAgree(e.target.checked)} required/>I have read and authorize the MVR request described above.</label>
+        <label className="screening-checkbox"><input type="checkbox" name="mvrConsent" value="yes" checked={mvrAgree} onChange={e=>setMvrAgree(e.target.checked)} required/>I have read and authorize the MVR request described above.</label>
         <label>Typed signature for MVR *<input name="mvrSignature" required value={mvrName} onChange={e=>setMvrName(e.target.value)} maxLength={120} autoComplete="off"/></label>
       </section>
       <section className="screening-card"><h2>5. FMCSA PSP disclosure and authorization</h2>
         {psp.sections.map((s,i)=><div className="screening-legal" key={i}><h3>{s.title}</h3>{s.body.split("\n\n").map((t,j)=><p key={j}>{t}</p>)}</div>)}
-        <label className="screening-checkbox"><input type="checkbox" checked={pspAgree} onChange={e=>setPspAgree(e.target.checked)} required/>I have read and authorize the FMCSA PSP report described above.</label>
+        <label className="screening-checkbox"><input type="checkbox" name="pspConsent" value="yes" checked={pspAgree} onChange={e=>setPspAgree(e.target.checked)} required/>I have read and authorize the FMCSA PSP report described above.</label>
         <label>Typed signature for PSP *<input name="pspSignature" required value={pspName} onChange={e=>setPspName(e.target.value)} maxLength={120} autoComplete="off"/></label>
       </section>
       <section className="screening-card"><h2>6. FMCSA Clearinghouse limited-query consent</h2>
         <div className="screening-legal"><p>I authorize Moontera LLC to conduct limited queries of the FMCSA Drug & Alcohol Clearinghouse, as permitted by 49 CFR § 382.703, during my service with Moontera LLC. A limited query indicates whether information exists and does not disclose detailed records. I understand that any required full query, including a pre-employment full query, requires separate electronic consent directly through the FMCSA Clearinghouse portal.</p></div>
-        <label className="screening-checkbox"><input type="checkbox" required checked={clearinghouseAgree} onChange={e=>setClearinghouseAgree(e.target.checked)}/>I consent to the limited Clearinghouse queries described above.</label>
+        <label className="screening-checkbox"><input type="checkbox" name="clearinghouseConsent" value="yes" required checked={clearinghouseAgree} onChange={e=>setClearinghouseAgree(e.target.checked)}/>I consent to the limited Clearinghouse queries described above.</label>
         <label>Typed signature for Clearinghouse limited queries *<input name="clearinghouseSignature" required value={clearinghouseName} onChange={e=>setClearinghouseName(e.target.value)} maxLength={120} autoComplete="off"/></label>
       </section>
       <section className="screening-card"><h2>7. Certification</h2>
