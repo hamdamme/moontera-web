@@ -16,6 +16,7 @@ export default function ScreeningForm() {
   const [pspName, setPspName] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState("");
+  const [deliveryIssue, setDeliveryIssue] = useState("");
   const [message, setMessage] = useState("");
   const today = new Date().toISOString().slice(0, 10);
   const [draft, setDraft] = useState<Record<string, string> | null>(null);
@@ -31,12 +32,14 @@ export default function ScreeningForm() {
       const result = await r.json();
       if (!r.ok) { if (r.status === 400) setDraft(null); throw Error(result.message || "Please try again."); }
       setDone(result.reference);
+      if (result.emailSent === false) setDeliveryIssue(result.message || "Saved, but the email was not delivered.");
     } catch (err) { setMessage(err instanceof Error ? err.message : "Unable to submit. Please retry."); }
     finally { setBusy(false); }
   }
   if (done) return <main className="screening-shell"><section className="screening-card"><h1>Screening information received</h1>
     <p>Thank you. Moontera LLC will review your information and contact you about next steps.</p>
     <p><strong>Reference:</strong> {done}</p>
+    {deliveryIssue && <p role="alert" className="screening-error">{deliveryIssue}</p>}
     <p>Submitting this form does not order a report, schedule a drug test, or replace consent required in the FMCSA Clearinghouse.</p>
   </section></main>;
   return <main className="screening-shell">
