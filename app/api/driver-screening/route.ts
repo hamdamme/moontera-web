@@ -1,7 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { put, BlobPreconditionFailedError } from "@vercel/blob";
 import { Resend } from "resend";
-import { states } from "@/app/apply/schema";
 import { publicScreeningKey } from "@/lib/screening/invite";
 import documents from "@/app/apply/documents/documents.json";
 
@@ -62,41 +61,23 @@ export async function POST(request: Request) {
     const email = val(raw,"email",254).toLowerCase();
     if (!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) throw new Invalid("Enter a valid email address.");
     if (raw.website) return respond({success:true,reference:"received"});
-    const name = val(raw,"name",120), dob = date(raw,"dob");
-    const phone = val(raw,"phone",20).replace(/\D/g,"");
-    if (phone.length !== 10) throw new Invalid("Enter a valid ten-digit phone number.");
-    const address = val(raw,"address",200), city=val(raw,"city",100),state=val(raw,"state",2),zip=val(raw,"zip",10);
-    if (!states.includes(state) || !/^\d{5}(-\d{4})?$/.test(zip)) throw new Invalid("Enter a valid address.");
-    const cdlNumber=val(raw,"cdlNumber",40),cdlState=val(raw,"cdlState",2),cdlClass=val(raw,"cdlClass",8);
-    if (!/^[A-Z0-9 -]{3,40}$/.test(cdlNumber)||!states.includes(cdlState)||!["Class A","Class B","Class C"].includes(cdlClass))
-      throw new Invalid("Enter valid CDL information.");
-    const cdlExpiration=date(raw,"cdlExpiration"),medicalIssue=date(raw,"medicalIssue"),medicalExpiration=date(raw,"medicalExpiration");
-    const today=new Date().toISOString().slice(0,10);
-    if (dob>today||medicalIssue>today||medicalExpiration<medicalIssue)
-      throw new Invalid("Check your birth date and medical card dates.");
-    const testStatus=val(raw,"testStatus",20),testDate=val(raw,"testDate",10,false);
-    if(!["Date known","Unknown","Never tested"].includes(testStatus)|| (testStatus==="Date known" && !testDate)||
-      (testStatus!=="Date known" && testDate))
-      throw new Invalid("Choose your last DOT drug test status.");
-    if(testDate && (date(raw,"testDate")>today))
+    const testDate = date(raw, "testDate", false);
+    if (testDate && testDate > new Date().toISOString().slice(0, 10))
       throw new Invalid("Last DOT drug test cannot be in the future.");
-    const testLocation=val(raw,"testLocation",120,false);
     const mvrSignature=val(raw,"mvrSignature",120),pspSignature=val(raw,"pspSignature",120),
-      clearinghouseSignature=val(raw,"clearinghouseSignature",120),certificationSignature=val(raw,"certificationSignature",120);
-    if (raw.mvrConsent !== "yes" || raw.pspConsent !== "yes" || raw.clearinghouseConsent !== "yes")
-      throw new Invalid("Review and agree to each separate screening authorization.");
-    if(raw.certified!=="yes") throw new Invalid("Please accept the certification.");
+      certificationSignature=val(raw,"certificationSignature",120);
+    const name = certificationSignature;
+    if (raw.mvrConsent !== "yes" || raw.pspConsent !== "yes")
+      throw new Invalid("Review and agree to the MVR and PSP authorizations.");
+    if (raw.certified !== "yes") throw new Invalid("Please accept the certification.");
     const key=publicScreeningKey(email);
     const id=randomUUID(),createdAt=new Date().toISOString();
     const record={
       id,createdAt,
-      driver:{email,name,dob,phone,address,city,state,zip,cdlNumber,cdlState,cdlClass,cdlExpiration,
-        medicalIssue,medicalExpiration,testStatus,testDate,testLocation},
+      driver:{email,name,testDate},
       consents:{
         mvr:{signedBy:mvrSignature,confirmed:true,version:consentVersion("mvr"),signedAt:createdAt},
         psp:{signedBy:pspSignature,confirmed:true,version:consentVersion("psp"),signedAt:createdAt},
-        clearinghouseLimited:{signedBy:clearinghouseSignature,confirmed:true,
-          version:"limited-query-v1",signedAt:createdAt},
       },
       certification:{signedBy:certificationSignature,at:createdAt},
       notification:"not-guaranteed",
