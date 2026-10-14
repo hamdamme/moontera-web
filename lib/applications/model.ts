@@ -10,12 +10,9 @@ import {
 export const quickFields = [
   { key: "full_name", label: "Full name", type: "text", required: true },
   { key: "address", label: "Street address", type: "text", required: true },
-  {
-    key: "city_state_zip",
-    label: "City / State / ZIP",
-    type: "text",
-    required: true,
-  },
+  { key: "city", label: "City", type: "text", required: true },
+  { key: "state", label: "State", type: "select", required: true },
+  { key: "zip", label: "ZIP code", type: "text", required: true },
   { key: "dob", label: "Date of birth", type: "date", required: true },
   { key: "phone", label: "Phone number", type: "tel", required: true },
   { key: "email", label: "Email address", type: "email", required: true },
@@ -107,8 +104,12 @@ export function validateSubmission(
       );
     if (!positions.includes(quick.position))
       throw new InputError("Choose a valid position.");
-    if (!quick.cdl_number || quick.cdl_number.length < 3)
-      throw new InputError("Enter a valid CDL number.");
+    if (!states.includes(quick.state))
+      throw new InputError("Choose a valid address state.");
+    if (!/^\d{5}(-\d{4})?$/.test(quick.zip))
+      throw new InputError("Enter a five-digit ZIP code, or ZIP+4.");
+    if (!/^[a-zA-Z0-9 -]{3,40}$/.test(quick.cdl_number))
+      throw new InputError("Enter a valid CDL number using letters, digits, spaces, or hyphens.");
     if (!states.includes(quick.cdl_state))
       throw new InputError("Choose the CDL issuing state.");
     if (!cdlClasses.some((value) => value === quick.cdl_class))
@@ -137,8 +138,10 @@ export function validateSubmission(
       throw new InputError("Medical card expiration must follow its issue date.");
     if (quick.drug_test_date && quick.drug_test_date > today)
       throw new InputError("Last drug test date cannot be in the future.");
-    if (!/^\+?1?\d{10}$/.test(quick.phone.replace(/[\s().-]/g, "")))
-      throw new InputError("Enter a valid phone number.");
+    const phoneDigits = quick.phone.replace(/\D/g, "");
+    if (!(phoneDigits.length === 10 || (phoneDigits.length === 11 && phoneDigits.startsWith("1"))))
+      throw new InputError("Enter a ten-digit US phone number.");
+    quick.phone = [phoneDigits.slice(-10, -7), phoneDigits.slice(-7, -4), phoneDigits.slice(-4)].join("-");
     result = {
       kind,
       requestId,
