@@ -45,7 +45,9 @@ const raw = {
   quick: {
     full_name: "Alex Example",
     address: "100 Example Street",
-    city_state_zip: "Chicago, IL 60601",
+    city: "Chicago",
+    state: "IL",
+    zip: "60601",
     dob: "1990-05-15",
     phone: "773-555-0123",
     email: "ALEX@example.com",
@@ -66,6 +68,10 @@ const quick = validateSubmission("quick", raw);
 assert.equal(quick.email, "alex@example.com");
 assert.equal(quick.quick.cdl_state, "IL");
 assert.equal(quick.quick.drug_test_date, "2026-01-15");
+assert.equal(quick.quick.phone, "773-555-0123");
+assert.throws(() => validateSubmission("quick", {...raw, quick: {...raw.quick, state: "ZZ"}}));
+assert.throws(() => validateSubmission("quick", {...raw, quick: {...raw.quick, zip: "abcdef"}}));
+assert.throws(() => validateSubmission("quick", {...raw, quick: {...raw.quick, phone: "12345"}}));
 for (const [key, value] of [
   ["cdl_state", "XX"],
   ["cdl_class", "Class Z"],
