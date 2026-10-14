@@ -110,7 +110,7 @@ export default function QuickApplication() {
                             {(field.key === "state" ? states : positions).map((option) => <option key={option} value={option}>{option}</option>)}
                           </select>
                         ) : (
-                          <input id={field.key} name={field.key} type={field.type} required maxLength={field.key === "email" ? 254 : field.key === "zip" ? 10 : field.key === "phone" ? 12 : 300}
+                          <input id={field.key} name={field.key} type={field.type} required maxLength={field.key === "email" ? 254 : field.key === "zip" ? 10 : field.key === "phone" ? 20 : 300}
                             value={field.key === "phone" ? phone : field.key === "zip" ? zip : undefined}
                             onChange={field.key === "phone" ? e => setPhone(formatPhone(e.target.value)) : field.key === "zip" ? e => setZip(formatZip(e.target.value)) : undefined}
                             inputMode={field.key === "phone" || field.key === "zip" ? "numeric" : undefined}
