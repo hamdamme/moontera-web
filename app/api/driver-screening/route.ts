@@ -83,6 +83,8 @@ export async function POST(request: Request) {
     const testLocation=val(raw,"testLocation",120,false);
     const mvrSignature=val(raw,"mvrSignature",120),pspSignature=val(raw,"pspSignature",120),
       clearinghouseSignature=val(raw,"clearinghouseSignature",120),certificationSignature=val(raw,"certificationSignature",120);
+    if (raw.mvrConsent !== "yes" || raw.pspConsent !== "yes" || raw.clearinghouseConsent !== "yes")
+      throw new Invalid("Review and agree to each separate screening authorization.");
     if(raw.certified!=="yes") throw new Invalid("Please accept the certification.");
     const key=recordKey(invite.nonce);
     const id=randomUUID(),createdAt=new Date().toISOString();
