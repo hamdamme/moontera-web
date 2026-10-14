@@ -4,7 +4,7 @@ import ScreeningForm from "./ScreeningForm";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Driver Screening | Moontera LLC", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Driver Screening | Moontera LLC", robots: { index: false, follow: false }, referrer: "no-referrer" };
 export default async function Page({ searchParams }: { searchParams: Promise<{ invite?: string }> }) {
   const { invite } = await searchParams;
   const valid = invite ? verifyInvite(invite) : null;
