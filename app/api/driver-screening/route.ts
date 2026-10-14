@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { put, BlobPreconditionFailedError } from "@vercel/blob";
 import { Resend } from "resend";
 import { states } from "@/app/apply/schema";
-import { verifyInvite, recordKey } from "@/lib/screening/invite";
+import { publicScreeningKey } from "@/lib/screening/invite";
 import documents from "@/app/apply/documents/documents.json";
 
 export const runtime = "nodejs";
@@ -55,14 +55,13 @@ export async function POST(request: Request) {
       if(n > 22000) { await reader.cancel();return respond({message:"Request too large."},413); }
       chunks.push(part.value);
     }
-    const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as {invite?:unknown;data?:unknown};
-    const invite = typeof body.invite === "string" ? verifyInvite(body.invite) : null;
-    if (!invite) return respond({message:"Invitation is invalid or expired. Request a new link."},403);
+    const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as {data?:unknown};
     if (!body.data || typeof body.data !== "object" || Array.isArray(body.data))
       throw new Invalid("Invalid form data.");
     const raw = body.data as Record<string, unknown>;
     const email = val(raw,"email",254).toLowerCase();
-    if (email !== invite.email) throw new Invalid("This invitation is for a different email address.");
+    if (!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) throw new Invalid("Enter a valid email address.");
+    if (raw.website) return respond({success:true,reference:"received"});
     const name = val(raw,"name",120), dob = date(raw,"dob");
     const phone = val(raw,"phone",20).replace(/\D/g,"");
     if (phone.length !== 10) throw new Invalid("Enter a valid ten-digit phone number.");
@@ -87,7 +86,7 @@ export async function POST(request: Request) {
     if (raw.mvrConsent !== "yes" || raw.pspConsent !== "yes" || raw.clearinghouseConsent !== "yes")
       throw new Invalid("Review and agree to each separate screening authorization.");
     if(raw.certified!=="yes") throw new Invalid("Please accept the certification.");
-    const key=recordKey(invite.nonce);
+    const key=publicScreeningKey(email);
     const id=randomUUID(),createdAt=new Date().toISOString();
     const record={
       id,createdAt,
@@ -106,7 +105,7 @@ export async function POST(request: Request) {
       await put(key,JSON.stringify(record),{access:"private",addRandomSuffix:false,allowOverwrite:false,contentType:"application/json"});
     }catch(e){
       if(e instanceof BlobPreconditionFailedError || (e instanceof Error && /already exists|precondition/i.test(e.message)))
-        return respond({message:"This invitation has already been submitted. Contact Moontera LLC if you need to correct your information."},409);
+        return respond({message:"A screening form has already been received for this email. Contact Moontera LLC to make corrections."},409);
       throw e;
     }
     // The private record is the source of truth. Email contains no CDL, DOB, or signature data.
