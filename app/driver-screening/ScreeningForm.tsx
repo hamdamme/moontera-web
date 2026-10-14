@@ -9,7 +9,8 @@ import "./screening.css";
 const mvr = documents.find(x => x.id === "mvr")!;
 const psp = documents.find(x => x.id === "psp")!;
 
-export default function ScreeningForm({ invite, email }: { invite: string; email: string }) {
+export default function ScreeningForm() {
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [zip, setZip] = useState("");
   const [cdl, setCdl] = useState("");
@@ -34,7 +35,7 @@ export default function ScreeningForm({ invite, email }: { invite: string; email
       const data = draft || Object.fromEntries(new FormData(e.currentTarget).entries()) as Record<string, string>;
       if (!draft) setDraft(data);
       const r = await fetch("/api/driver-screening", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invite, data }) });
+        body: JSON.stringify({ data }) });
       const result = await r.json();
       if (!r.ok) { if (r.status === 400) setDraft(null); throw Error(result.message || "Please try again."); }
       setDone(result.reference);
@@ -47,16 +48,16 @@ export default function ScreeningForm({ invite, email }: { invite: string; email
     <p>Submitting this form does not order a report, schedule a drug test, or replace consent required in the FMCSA Clearinghouse.</p>
   </section></main>;
   return <main className="screening-shell">
-    <header className="screening-header"><strong>MOONTERA LLC</strong><span>PRIVATE DRIVER SCREENING</span></header>
+    <header className="screening-header"><strong>MOONTERA LLC</strong><span>DRIVER SCREENING</span></header>
     <div className="screening-intro"><h1>Driver Screening</h1>
-      <p>Complete your driver information and review each authorization separately. This invitation expires after seven days.</p>
+      <p>Complete your driver information and review each authorization separately.</p>
       <p className="screening-note">Screening does not guarantee employment. No background reports or drug tests are automatically ordered when you submit this form.</p>
     </div>
     <form onSubmit={submit}>
-      <input type="hidden" name="email" value={email}/>
+      <div className="screening-honeypot" aria-hidden="true"><label>Leave this blank<input type="text" name="website" tabIndex={-1} autoComplete="off"/></label></div>
       <section className="screening-card"><h2>1. Personal information</h2><div className="screening-grid">
         <label>Full legal name *<input required name="name" autoComplete="name" maxLength={120}/></label>
-        <label>Email address <input readOnly aria-readonly="true" value={email} type="email"/></label>
+        <label>Email address *<input name="email" required value={email} onChange={e=>setEmail(e.target.value)} type="email" autoComplete="email" maxLength={254}/></label>
         <label>Phone number *<input name="phone" required type="tel" inputMode="numeric" placeholder="773-555-0123" value={phone} onChange={e=>setPhone(formatPhone(e.target.value))} minLength={12} maxLength={12} autoComplete="tel-national"/></label>
         <label>Date of birth *<input name="dob" type="date" required max={today}/></label>
         <label className="screening-wide">Street address *<input name="address" required autoComplete="street-address" maxLength={200}/></label>

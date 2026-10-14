@@ -37,3 +37,8 @@ export function recordKey(nonce: string): string {
   const digest = createHmac("sha256", secret()).update("driver-screening/record/" + nonce).digest("hex");
   return "driver-screening/" + digest + ".json";
 }
+
+export function publicScreeningKey(email: string): string {
+  return "driver-screening/public/" + createHmac("sha256", secret())
+    .update("driver-screening/public/v1/" + email.trim().toLowerCase()).digest("hex") + ".json";
+}
