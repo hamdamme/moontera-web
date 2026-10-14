@@ -671,3 +671,8 @@
     break-inside: avoid;
   }
 }
+
+/* Keep the Quick Application's grouped fields aligned without native fieldset borders. */
+.quick-fieldset{border:0;padding:0;margin:0;min-width:0}
+.quick-fieldset:disabled{opacity:.72}
+.apply-field input::placeholder{color:#94a3b8}

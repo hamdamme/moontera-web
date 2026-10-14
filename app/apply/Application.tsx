@@ -214,7 +214,7 @@ export default function Application() {
                     : f.type === "ssn"
                       ? 11
                       : f.type === "phone"
-                        ? 12
+                        ? 20
                         : f.key === "zip"
                           ? 10
                           : 250
@@ -225,8 +225,8 @@ export default function Application() {
                   : f.type === "email"
                     ? "email"
                     : f.type === "phone"
-                      ? "tel"
-                      : undefined
+                      ? "tel-national"
+                      : f.key === "first" ? "given-name" : f.key === "middle" ? "additional-name" : f.key === "last" ? "family-name" : f.key === "street" ? "street-address" : f.key === "city" ? "address-level2" : f.key === "zip" ? "postal-code" : "off"
               }
               placeholder={
                 f.type === "date"

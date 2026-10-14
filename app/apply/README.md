@@ -1,9 +1,9 @@
 # Driver applications
 
-- `/application/details`: Quick Application, first-section contact/position/availability fields only; no SSN or qualification/consent sections.
+- `/application/details`: Quick Application, a single scrolling page with contact, position, CDL, DOT medical card, last drug test details, and optional SSN last four. No separate consent is gathered.
 - `/apply`: Full Driver Application with employment/driving history, CDL, medical/DOT fields, Clearinghouse acknowledgment and optional SMS consent.
 - `/application`: redirects to `/apply`.
-- `/apply/documents`: separate policy and MVR/PSP signature **previews**. These are not executed or included in application intake.
+- `/apply/documents`: company policy **previews** only. MVR and PSP screening authorizations are no longer listed here and are not part of the Quick Application.
 
 Both forms POST to their corresponding `/api/application/{quick,full}` route. The server validates fields and record counts, generates a completed PDF, stores a private record, emails the PDF to `llcmoontera@gmail.com`, and sends the applicant a separate text confirmation without the PDF. Applicant answers are not stored in browser storage. Session storage contains only a random request ID keyed by a hash of email/type for retry handling.
 
