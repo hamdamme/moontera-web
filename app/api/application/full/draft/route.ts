@@ -1,6 +1,7 @@
 import { InputError, sanitizeDraftAnswers } from "@/lib/applications/model";
 import { getFullApplicantSession } from "@/lib/onboarding/full-auth";
 import { validAdminOrigin } from "@/lib/onboarding/admin-auth";
+import { draftRetentionDeadline } from "@/lib/onboarding/draft-lifecycle";
 import { createPrivate, readPrivate, updatePrivate } from "@/lib/onboarding/private-store";
 import type { Answers } from "@/app/apply/schema";
 
@@ -48,7 +49,10 @@ export async function PUT(request: Request) {
       email: session.email,
       answers,
       updatedAt: new Date().toISOString(),
-      retentionEndsAt: session.expiresAt + 30 * 24 * 60 * 60 * 1000,
+      retentionEndsAt: draftRetentionDeadline(
+        current?.value.retentionEndsAt,
+        session.expiresAt,
+      ),
     };
     let version: string | null;
     if (current && current.value.retentionEndsAt > Date.now()) {

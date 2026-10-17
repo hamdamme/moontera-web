@@ -18,6 +18,7 @@ execFileSync(
     "lib/applications/workflow.ts",
     "lib/applications/submission-pdf.ts",
     "lib/screening/pdf.ts",
+    "lib/onboarding/draft-lifecycle.ts",
     "--outDir",
     tmp,
     "--module",
@@ -39,10 +40,33 @@ const { createSubmissionPdf } = require(
   path.join(tmp, "lib/applications/submission-pdf.js"),
 );
 const { createScreeningPdf } = require(path.join(tmp, "lib/screening/pdf.js"));
+const { draftRetentionDeadline } = require(
+  path.join(tmp, "lib/onboarding/draft-lifecycle.js"),
+);
 const { initialAnswers, steps, dateKey, formatValue, validateStep } = require(
   path.join(tmp, "app/apply/schema.js"),
 );
 const id = "00000000-0000-4000-8000-000000000001";
+const retentionNow = Date.UTC(2026, 0, 1);
+const originalInviteExpires = retentionNow + 14 * 24 * 60 * 60 * 1000;
+const originalDraftDeadline = draftRetentionDeadline(
+  undefined,
+  originalInviteExpires,
+  retentionNow,
+);
+assert.equal(
+  originalDraftDeadline,
+  originalInviteExpires + 30 * 24 * 60 * 60 * 1000,
+);
+const replacementInviteExpires = originalInviteExpires + 14 * 24 * 60 * 60 * 1000;
+assert.equal(
+  draftRetentionDeadline(originalDraftDeadline, replacementInviteExpires, retentionNow),
+  originalDraftDeadline,
+);
+assert.equal(
+  draftRetentionDeadline(originalDraftDeadline, replacementInviteExpires, originalDraftDeadline),
+  replacementInviteExpires + 30 * 24 * 60 * 60 * 1000,
+);
 const raw = {
   requestId: id,
   quick: {
@@ -378,6 +402,6 @@ const deps = {
   fs.writeFileSync(path.join(out, "Moontera-screening-sample.pdf"), screeningPdf);
   assert(screeningPdf.length > 1000 && revisedPdf.length > 1000);
   console.log(
-    "PASS: validation, missing groups, date checks, email normalization, concurrent duplicate prevention, repeat requests, partial email retry, timeout cutoff, and formatted PDFs.",
+    "PASS: validation, missing groups, date checks, email normalization, draft retention deadlines, concurrent duplicate prevention, repeat requests, partial email retry, timeout cutoff, and formatted PDFs.",
   );
 })().finally(() => fs.rmSync(tmp, { recursive: true, force: true }));
