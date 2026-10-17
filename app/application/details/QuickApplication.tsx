@@ -1,3 +1,4 @@
+
 "use client";
 import { useRef, useState, type FormEvent } from "react";
 import { quickFields } from "@/lib/applications/model";

@@ -1,3 +1,4 @@
+
 /* eslint-disable @typescript-eslint/no-require-imports -- CommonJS test harness. */
 const assert = require("node:assert/strict"),
   fs = require("node:fs"),
@@ -17,6 +18,7 @@ execFileSync(
     "lib/applications/model.ts",
     "lib/applications/workflow.ts",
     "lib/applications/submission-pdf.ts",
+    "lib/applications/policies-pdf.ts",
     "lib/applications/origin.ts",
     "lib/http/read-json-body.ts",
     "lib/screening/pdf.ts",
@@ -29,6 +31,7 @@ execFileSync(
     "--target",
     "es2022",
     "--esModuleInterop",
+    "--resolveJsonModule",
     "--skipLibCheck",
   ],
   { cwd: root, stdio: "inherit" },
@@ -47,6 +50,9 @@ const { JsonBodyError, readJsonBody } = require(
 );
 const { createSubmissionPdf } = require(
   path.join(tmp, "lib/applications/submission-pdf.js"),
+);
+const { createPolicyPacketPdf } = require(
+  path.join(tmp, "lib/applications/policies-pdf.js"),
 );
 const { createScreeningPdf } = require(path.join(tmp, "lib/screening/pdf.js"));
 const { draftRetentionDeadline } = require(
@@ -483,6 +489,9 @@ const deps = {
   }
   const revisedPdf = await createSubmissionPdf(full, "SAMPLE-REVISION-1", "2026-10-17T15:00:00.000Z", font, template, 1);
   fs.writeFileSync(path.join(out, "Moontera-full-revision-1-sample.pdf"), revisedPdf);
+  const policyPdf = await createPolicyPacketPdf(font);
+  const policyDocument = await require("pdf-lib").PDFDocument.load(policyPdf);
+  assert(policyPdf.length > 1000 && policyDocument.getPageCount() >= 3);
   const legalDocs = require(path.join(root, "app/apply/documents/documents.json"));
   const screeningPdf = await createScreeningPdf({
     id: "SAMPLE-SCREENING-ONLY",
@@ -505,6 +514,6 @@ const deps = {
   fs.writeFileSync(path.join(out, "Moontera-screening-sample.pdf"), screeningPdf);
   assert(screeningPdf.length > 1000 && revisedPdf.length > 1000);
   console.log(
-    "PASS: bounded JSON bodies, validation, request origins, missing groups, date checks, email normalization, screening release gate, draft retention deadlines, concurrent duplicate prevention, repeat requests, partial email retry, timeout cutoff, and formatted PDFs.",
+    "PASS: bounded JSON bodies, validation, request origins, missing groups, date checks, email normalization, screening release gate, draft retention deadlines, concurrent duplicate prevention, repeat requests, partial email retry, timeout cutoff, and formatted application, screening, and policy PDFs.",
   );
 })().finally(() => fs.rmSync(tmp, { recursive: true, force: true }));

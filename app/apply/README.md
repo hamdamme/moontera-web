@@ -1,3 +1,4 @@
+
 # Driver applications
 
 - `/application/details`: Quick Application, a single scrolling page with contact, position, CDL, DOT medical card, last drug test details, and required SSN last four. The Quick Application does not ask for the DOT medical card issue date. No separate consent is gathered.

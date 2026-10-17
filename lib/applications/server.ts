@@ -1,3 +1,4 @@
+
 import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -11,6 +12,7 @@ import {
   type Store,
 } from "./workflow";
 import { createSubmissionPdf } from "./submission-pdf";
+import { createPolicyPacketPdf } from "./policies-pdf";
 import { createPrivate, readPrivate, updatePrivate } from "@/lib/onboarding/private-store";
 import { isAllowedApplicationOrigin } from "./origin";
 
@@ -89,6 +91,7 @@ export async function handleApplication(
   request: Request,
   kind: "quick" | "full",
   verifiedEmail?: string,
+  sourceQuickId?: string,
 ) {
   try {
     if (!isAllowedApplicationOrigin(request.headers.get("origin"), request.url))
@@ -154,8 +157,14 @@ export async function handleApplication(
       return reply({ success: false, message: "Too many application attempts from this network. Please try again later or contact info@moonterallc.com." }, 429);
     const key = `applications/${kind}/${createHmac("sha256", process.env.APPLICATION_KEY_SECRET).update(payload.email).digest("hex")}.json`;
     const resend = new Resend(process.env.RESEND_API_KEY);
+    const policyPacket = kind === "full"
+      ? await createPolicyPacketPdf(
+          await readFile(path.join(process.cwd(), "public/fonts/Geist-Regular.ttf")),
+        )
+      : undefined;
     const result = await processSubmission(key, payload, {
       store,
+      ...(kind === "full" && sourceQuickId ? { sourceQuickId } : {}),
       historyKey:
         kind === "quick"
           ? (currentKey, requestId) => {
@@ -190,7 +199,7 @@ export async function handleApplication(
               : `${title} submitted - Moontera LLC`,
             text: owner
               ? `${record.payload.name} submitted a ${title.toLowerCase()}.\n\nThe completed application is attached as a PDF.\nReference: ${record.id}\nReceived: ${record.createdAt}\nContact: ${record.payload.email}`
-              : `Hello ${record.payload.name},\n\nYour ${title.toLowerCase()} has been submitted to Moontera LLC. Our team will review it and contact you if more information is needed. You do not need to submit this application again.\n\nReference: ${record.id}\n\nQuestions or corrections? Contact info@moonterallc.com or 773-882-5595.\n\nMoontera LLC`,
+              : `Hello ${record.payload.name},\n\nYour ${title.toLowerCase()} has been submitted to Moontera LLC. Our team will review it and contact you if more information is needed. You do not need to submit this application again.${record.payload.kind === "full" ? "\n\nAttached are the Driver Safety & Compliance, Cargo Claims & Freight Handling, and Accident & Emergency Procedures policies for your review." : ""}\n\nReference: ${record.id}\n\nQuestions or corrections? Contact info@moonterallc.com or 773-882-5595.\n\nMoontera LLC`,
             ...(owner
               ? {
                   attachments: [
@@ -200,6 +209,15 @@ export async function handleApplication(
                     },
                   ],
                 }
+              : record.payload.kind === "full" && policyPacket
+                ? {
+                    attachments: [
+                      {
+                        filename: "Moontera-Driver-Policies.pdf",
+                        content: Buffer.from(policyPacket).toString("base64"),
+                      },
+                    ],
+                  }
               : {}),
           },
           { idempotencyKey: `application/${record.id}/${recipient}` },

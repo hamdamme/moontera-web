@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
@@ -156,7 +157,7 @@ export default function AdminDashboard() {
   }
 
   async function deleteApplication(id: string, name: string) {
-    if (!window.confirm(`Remove ${name}'s application from the active dashboard? Its signed records will be retained and its invitation links disabled.`)) return;
+    if (!window.confirm(`Permanently delete ${name}'s application and its linked screening, invitation, and draft records? This cannot be undone.`)) return;
     setBusy(true);
     setNotice("");
     try {
@@ -169,7 +170,7 @@ export default function AdminDashboard() {
       if (!response.ok) throw new Error(result.message || "Application could not be removed.");
       setApplications((current) => current.filter((application) => application.id !== id));
       if (selected?.id === id) setSelected(null);
-      setNotice("Application removed from the active dashboard. Signed records remain retained; invitation links are disabled.");
+      setNotice("Application and linked records permanently deleted.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Application could not be removed.");
     } finally {
