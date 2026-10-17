@@ -5,8 +5,9 @@ Updated 2026-10-17 on `codex/quick-90-day-reapply`.
 ## Implemented
 
 - Quick Application accepts a new submission after 90 full days, preserves completed history, and keeps same-request delivery retries idempotent.
+- Quick and Full submission intake applies a shared-network attempt limit; stored rate-limit keys are HMAC digests and expire automatically.
 - Full Application is invitation-only and requires email OTP before personal data, prefill, or drafts are returned. Full SSN is never collected online.
-- Full Application autosaves validated answers to private Blob storage with version checks and restores them on a valid verified invitation. A daily Vercel Cron route deletes drafts after the original invitation expiration plus 30 days.
+- Full Application autosaves validated answers to private Blob storage with version checks and restores them on a valid verified invitation. A daily Vercel Cron route deletes drafts after the original invitation expiration plus 30 days and removes expired invitation/authentication artifacts.
 - A driver can edit a signed Full Application during the valid invitation period. Changes remain an unsigned autosaved draft until the driver signs again; the signed revision PDF is immutable, numbered, and emailed once to the owner with a plain applicant receipt.
 - Screening invitations are issued manually, expire after 14 days, and replacements revoke the previous link. Full invitations require signed Screening consent. Screening consent records are immutable; replacement consent is a separate record.
 - Single-admin passwordless sign-in, session-protected application lists/details, invitation expiry and revocation controls, and private PDF downloads for Quick, Screening, original Full, latest Full, and numbered revisions are implemented.

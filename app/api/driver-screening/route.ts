@@ -26,6 +26,7 @@ type ScreeningRecord = ScreeningPdfData & {
   inviteHash: string;
   requestId: string;
   pdf: string;
+  attemptStartedAt?: number;
   ownerEmailId?: string;
   applicantEmailId?: string;
 };
@@ -74,6 +75,14 @@ async function deliver(recordPath: string) {
   };
   let current = stored.value;
   let etag = stored.etag;
+  if (!current.attemptStartedAt) {
+    const next = await updatePrivate(recordPath, { ...current, attemptStartedAt: Date.now() }, etag);
+    if (!next) throw new Error("Screening email state changed");
+    current = { ...current, attemptStartedAt: Date.now() };
+    etag = next;
+  } else if (Date.now() - current.attemptStartedAt > 23 * 60 * 60 * 1000 && (!current.ownerEmailId || !current.applicantEmailId)) {
+    throw new Error("Screening delivery needs manual owner attention");
+  }
   if (!current.ownerEmailId) {
     const id = await send("owner");
     const next = await updatePrivate(recordPath, { ...current, ownerEmailId: id }, etag);
@@ -94,9 +103,26 @@ async function deliver(recordPath: string) {
 export async function POST(request: Request) {
   if (!validAdminOrigin(request)) return fail("Invalid request origin.", 403);
   if (Number(request.headers.get("content-length")) > 150000) return fail("Submission is too large.", 413);
+  if (!request.headers.get("content-type")?.includes("application/json")) return fail("Send screening consent as JSON.", 415);
   if (!process.env.BLOB_READ_WRITE_TOKEN || !process.env.RESEND_API_KEY) return fail("Screening submission is unavailable.", 503);
   try {
-    const body = (await request.json()) as ScreeningBody;
+    const reader = request.body?.getReader();
+    if (!reader) return fail("Missing screening consent.", 400);
+    const chunks: Uint8Array[] = [];
+    let bodyLength = 0;
+    while (true) {
+      const part = await reader.read();
+      if (part.done) break;
+      bodyLength += part.value.length;
+      if (bodyLength > 150000) {
+        await reader.cancel();
+        return fail("Submission is too large.", 413);
+      }
+      chunks.push(part.value);
+    }
+    let body: ScreeningBody;
+    try { body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as ScreeningBody; }
+    catch { return fail("Invalid screening consent.", 400); }
     const invitation = await readActiveInvitation(safeText(body.token, 64), "screening");
     if (!invitation) return fail("This Screening invitation is invalid or expired.", 401);
     const disclosure = getScreeningDisclosures();
@@ -176,6 +202,8 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     console.error("Screening submission failed", error instanceof Error ? error.name : "Unknown error");
+    if (error instanceof Error && error.message.includes("manual owner attention"))
+      return fail("This saved consent needs delivery review. Contact info@moonterallc.com and do not submit a new Screening form.", 503);
     return fail("Your signed screening consent is saved or can be retried. Contact info@moonterallc.com if delivery does not complete.", 503);
   }
 }

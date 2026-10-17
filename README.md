@@ -9,7 +9,7 @@ Next.js 16 driver application workflow using private Vercel Blob storage and Res
 3. After Screening is signed, the administrator manually sends the 14-day Full Application invitation. The applicant verifies the invited address by email code before any prefilled details or saved draft are displayed.
 4. Full Application answers autosave to private storage. A signed application is immutable; changes are saved as a draft and require a fresh signature before a numbered revision is emailed. Expired invite tokens do not grant access.
 
-`/api/cron/purge-full-drafts` removes only drafts past their `retentionEndsAt` date. The schedule is daily at 11:00 UTC. Set `CRON_SECRET` in the hosting environment; the scheduled request must include it as a Bearer token. Draft retention is 30 days beyond the original Full invitation expiration. Signed records are retained separately; their retention period still requires an owner-approved legal policy.
+`/api/cron/purge-full-drafts` removes drafts past their `retentionEndsAt` date, expired invitations, and expired one-time authentication records. The schedule is daily at 11:00 UTC. Set `CRON_SECRET` in the hosting environment; the scheduled request must include it as a Bearer token. Draft retention is 30 days beyond the original Full invitation expiration. Signed records are retained separately; their retention period still requires an owner-approved legal policy.
 
 ## Environment variables
 
@@ -34,6 +34,7 @@ The Screening route remains intentionally unavailable until all Clearinghouse ap
 
 - The dashboard shows Quick intake, invitation expiry, and simple Screening/Full workflow states. Sending or replacing an invitation is a manual administrator action; replacing one revokes the prior link.
 - The dashboard can download private Quick, Screening Consents, and Full Application PDFs. Full revisions are separately preserved and downloadable.
+- The public application endpoint limits successful attempts to 30 per source IP per hour using only a keyed IP digest; daily cleanup expires those counters.
 - Email delivery uses Resend idempotency keys. If a submission reports that delivery is incomplete, retry the same operation; do not create a second application.
 - Keep Resend and Vercel access restricted. Application PDFs contain sensitive personal information and are emailed to the owner account.
 - There is no automated retention policy for signed Quick, Screening, or Full records yet. Approve a legal retention/deletion schedule before production use.

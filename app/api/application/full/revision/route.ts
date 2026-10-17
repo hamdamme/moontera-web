@@ -30,6 +30,7 @@ type FullRevision = {
   complete: boolean;
   ownerEmailId?: string;
   applicantEmailId?: string;
+  attemptStartedAt?: number;
 };
 
 function fail(message: string, status: number) {
@@ -64,6 +65,16 @@ async function sendRevision(record: FullRevision) {
   };
   let current = stored.value;
   let etag = stored.etag;
+  if (!current.complete && current.attemptStartedAt && Date.now() - current.attemptStartedAt > 23 * 60 * 60 * 1000) {
+    throw new Error("Revision delivery needs manual owner attention");
+  }
+  if (!current.complete && !current.attemptStartedAt) {
+    const started = Date.now();
+    const next = await updatePrivate(key, { ...current, attemptStartedAt: started }, etag);
+    if (!next) throw new Error("Revision delivery state changed");
+    current = { ...current, attemptStartedAt: started };
+    etag = next;
+  }
   for (const recipient of ["owner", "applicant"] as const) {
     const field = recipient === "owner" ? "ownerEmailId" : "applicantEmailId";
     if (current[field]) continue;
@@ -178,6 +189,8 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof InputError) return fail(error.message, 400);
     console.error("Full application revision failed", error instanceof Error ? error.name : "Unknown error");
+    if (error instanceof Error && error.message.includes("manual owner attention"))
+      return fail("This saved revision needs delivery review. Contact info@moonterallc.com and do not create another revision.", 503);
     return fail("Revision delivery is not complete. Retry the same signed revision; do not create another.", 503);
   }
 }
