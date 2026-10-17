@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState, type FormEvent } from "react";
 import { quickFields } from "@/lib/applications/model";
-import { submissionId } from "@/lib/applications/client";
+import { clearSubmissionId, submissionId } from "@/lib/applications/client";
 import "../../apply/application.css";
 
 export default function QuickApplication() {
@@ -43,6 +43,8 @@ export default function QuickApplication() {
         }
         throw Error(result.message || "Submission failed. Please retry.");
       }
+      const submittedQuick = pending.current?.quick as Record<string, string> | undefined;
+      if (submittedQuick?.email) await clearSubmissionId("quick", submittedQuick.email);
       setReceipt(result.id);
     } catch (error) {
       setMessage(
