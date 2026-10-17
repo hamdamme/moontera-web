@@ -147,8 +147,12 @@ export default function QuickApplication() {
                                 ? "email"
                                 : field.key === "phone"
                                   ? "tel"
-                                  : field.key === "full_name"
-                                    ? "name"
+                                  : field.key === "first_name"
+                                    ? "given-name"
+                                    : field.key === "middle_name"
+                                      ? "additional-name"
+                                      : field.key === "last_name"
+                                        ? "family-name"
                                     : undefined
                             }
                           />

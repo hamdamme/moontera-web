@@ -150,6 +150,11 @@ export async function createScreeningPdf(
       : value;
   };
   paragraph(`Applicant: ${data.name} | Verified email: ${data.email}`, 9, navy);
+  const signedDate = new Date(`${data.certificationDate}T00:00:00.000Z`);
+  const displayedSignedDate = Number.isFinite(signedDate.valueOf())
+    ? signedDate.toLocaleDateString("en-US", { timeZone: "UTC" })
+    : data.certificationDate;
+  paragraph(`Applicant signature (typed): ${data.certificationName} | Date signed: ${displayedSignedDate}`, 9, navy);
   paragraph(`Submission reference: ${data.id} | Received: ${formatUtc(data.submittedAt)}`, 8);
   heading("Driver Identification", "01");
   paragraph(`Full legal name: ${data.name}\nVerified invitation email: ${data.email}`, 9, navy);

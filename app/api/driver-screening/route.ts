@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { Resend } from "resend";
 import { getScreeningDisclosures } from "@/lib/screening/disclosures";
 import { createScreeningPdf, type ScreeningPdfData } from "@/lib/screening/pdf";
+import { deliverScreeningRecord, type ScreeningRecord } from "@/lib/screening/delivery";
 import { readActiveInvitation } from "@/lib/onboarding/invitations";
 import { readPrivate, createPrivate, updatePrivate } from "@/lib/onboarding/private-store";
 import { validAdminOrigin } from "@/lib/onboarding/admin-auth";
@@ -21,15 +21,6 @@ type ScreeningBody = {
   clearinghouse: { agreed: boolean; name: string };
   certification: { agreed: boolean; name: string; date: string };
 };
-type ScreeningRecord = ScreeningPdfData & {
-  quickId: string;
-  inviteHash: string;
-  requestId: string;
-  pdf: string;
-  attemptStartedAt?: number;
-  ownerEmailId?: string;
-  applicantEmailId?: string;
-};
 type ScreeningPointer = { quickId: string; recordPath: string; signedAt: string; inviteHash: string };
 
 function fail(message: string, status: number) {
@@ -45,59 +36,6 @@ function validDate(value: string) {
 function safeText(value: unknown, max = 150) {
   if (typeof value !== "string" || value.length > max || /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value)) return "";
   return value.trim();
-}
-
-async function deliver(recordPath: string) {
-  const stored = await readPrivate<ScreeningRecord>(recordPath);
-  if (!stored) throw new Error("Saved screening record not found");
-  const record = stored.value;
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const from = process.env.APPLICATION_FROM || "Moontera LLC <info@moonterallc.com>";
-  const send = async (recipient: "owner" | "applicant") => {
-    const owner = recipient === "owner";
-    const { data, error } = await resend.emails.send(
-      {
-        from,
-        to: [owner ? "llcmoontera@gmail.com" : record.email],
-        replyTo: owner ? record.email : "info@moonterallc.com",
-        subject: owner
-          ? `Screening Consents - ${record.name}`
-          : "Screening consents submitted - Moontera LLC",
-        text: owner
-          ? `${record.name} submitted driver screening consents. The completed PDF is attached.\nReference: ${record.id}\nReceived: ${record.submittedAt}\nVerified email: ${record.email}`
-          : `Hello ${record.name},\n\nYour Screening Consents were submitted to Moontera LLC. A copy is not attached to this email.\nReference: ${record.id}\n\nQuestions? Contact info@moonterallc.com or 773-882-5595.\n\nMoontera LLC`,
-        ...(owner ? { attachments: [{ filename: `Moontera-Screening-Consents-${record.id.slice(0, 8)}.pdf`, content: record.pdf }] } : {}),
-      },
-      { idempotencyKey: `screening/${record.id}/${recipient}` },
-    );
-    if (error || !data?.id) throw new Error("Screening email delivery failed");
-    return data.id;
-  };
-  let current = stored.value;
-  let etag = stored.etag;
-  if (!current.attemptStartedAt) {
-    const next = await updatePrivate(recordPath, { ...current, attemptStartedAt: Date.now() }, etag);
-    if (!next) throw new Error("Screening email state changed");
-    current = { ...current, attemptStartedAt: Date.now() };
-    etag = next;
-  } else if (Date.now() - current.attemptStartedAt > 23 * 60 * 60 * 1000 && (!current.ownerEmailId || !current.applicantEmailId)) {
-    throw new Error("Screening delivery needs manual owner attention");
-  }
-  if (!current.ownerEmailId) {
-    const id = await send("owner");
-    const next = await updatePrivate(recordPath, { ...current, ownerEmailId: id }, etag);
-    if (!next) throw new Error("Screening email state changed");
-    current = { ...current, ownerEmailId: id };
-    etag = next;
-  }
-  if (!current.applicantEmailId) {
-    const id = await send("applicant");
-    const next = await updatePrivate(recordPath, { ...current, applicantEmailId: id }, etag);
-    if (!next) throw new Error("Screening email state changed");
-    current = { ...current, applicantEmailId: id };
-    etag = next;
-  }
-  return current;
 }
 
 export async function POST(request: Request) {
@@ -195,7 +133,7 @@ export async function POST(request: Request) {
         : await createPrivate(pointerPath, nextPointer);
       if (!savedPointer) return fail("The consent is saved but its workflow status needs attention. Retry to finish delivery.", 503);
     }
-    const delivered = await deliver(recordPath);
+    const delivered = await deliverScreeningRecord(recordPath);
     return Response.json(
       { success: true, id: delivered.id, alreadySubmitted: !!stored.value.ownerEmailId && !!stored.value.applicantEmailId },
       { headers: { "Cache-Control": "no-store" } },
@@ -204,6 +142,8 @@ export async function POST(request: Request) {
     console.error("Screening submission failed", error instanceof Error ? error.name : "Unknown error");
     if (error instanceof Error && error.message.includes("manual owner attention"))
       return fail("This saved consent needs delivery review. Contact info@moonterallc.com and do not submit a new Screening form.", 503);
+    if (error instanceof Error && error.message.includes("Moontera screening email delivery failed"))
+      return fail("Your signed consent is saved, but Moontera has not received the PDF email yet. Retry this submission or contact info@moonterallc.com. Do not start a new form.", 503);
     return fail("Your signed screening consent is saved or can be retried. Contact info@moonterallc.com if delivery does not complete.", 503);
   }
 }

@@ -19,7 +19,9 @@ export type QuickField = {
   when?: [string, string];
 };
 export const quickFields: QuickField[] = [
-  { key: "full_name", label: "Full legal name", type: "text", required: true },
+  { key: "first_name", label: "First name", type: "text", required: true },
+  { key: "middle_name", label: "Middle name", type: "text" },
+  { key: "last_name", label: "Last name", type: "text", required: true },
   { key: "address", label: "Street address", type: "text", required: true },
   { key: "city", label: "City", type: "text", required: true },
   { key: "state", label: "State", type: "select", required: true, options: states },
@@ -235,7 +237,7 @@ export function validateSubmission(
       kind,
       requestId,
       email: normalizeEmail(quick.email),
-      name: quick.full_name,
+      name: [quick.first_name, quick.middle_name, quick.last_name].filter(Boolean).join(" "),
       quick,
       certified: false,
     };

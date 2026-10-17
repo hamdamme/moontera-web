@@ -9,7 +9,7 @@ export type ApplicationSummary = Pick<RecordData, "id" | "createdAt" | "complete
   state: string;
   kind: "quick" | "full";
 };
-export type LocatedQuickRecord = { pathname: string; record: RecordData };
+export type LocatedQuickRecord = { pathname: string; record: RecordData; etag: string };
 
 export async function listApplicationRecords(cursor?: string) {
   const result = await list({
@@ -24,7 +24,9 @@ export async function listApplicationRecords(cursor?: string) {
     paths.map(async (pathname) => {
       try {
         const stored = await readPrivate<RecordData>(pathname);
-        return stored ? { pathname, record: stored.value } : null;
+        return stored && !stored.value.deletedAt
+          ? { pathname, record: stored.value, etag: stored.etag }
+          : null;
       } catch {
         return null;
       }

@@ -164,6 +164,27 @@ export async function getFullApplicantSession(request: Request) {
   return { ...invitation, email: session.value.email, sessionExpiresAt: session.value.expiresAt };
 }
 
+export async function createFullApplicantSession(token: string) {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
+  const invitation = await readActiveInvitation(token, "full");
+  if (!invitation) return null;
+  const sessionToken = randomBytes(32).toString("base64url");
+  const now = Date.now();
+  const expiresAt = Math.min(now + SESSION_TTL, invitation.expiresAt);
+  const saved = await createPrivate<FullSession>(
+    `${SESSION_PREFIX}${hashSecret(sessionToken)}.json`,
+    {
+      inviteHash: invitation.tokenHash,
+      email: invitation.email,
+      createdAt: now,
+      expiresAt,
+    },
+  );
+  return saved
+    ? { sessionToken, email: invitation.email, quickId: invitation.quickId, expiresAt }
+    : null;
+}
+
 export async function revokeFullApplicantSession(request: Request) {
   const token = getCookie(request);
   if (!token) return;

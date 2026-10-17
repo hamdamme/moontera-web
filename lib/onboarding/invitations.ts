@@ -136,6 +136,9 @@ export async function readActiveInvitationHash(
     !invitation.quickPath.endsWith(".json")
   )
     return null;
+  const application = await readPrivate<{ id?: string; deletedAt?: string }>(invitation.quickPath);
+  if (!application || application.value.id !== invitation.quickId || application.value.deletedAt)
+    return null;
   return invitation;
 }
 

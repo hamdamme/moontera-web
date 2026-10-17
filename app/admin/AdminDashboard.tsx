@@ -15,6 +15,8 @@ type ApplicationSummary = {
   state: string;
   kind: "quick" | "full";
   screeningSigned?: boolean;
+  screeningOwnerEmailSent?: boolean;
+  screeningApplicantEmailSent?: boolean;
   screeningInviteExpiresAt?: number | null;
   fullInviteExpiresAt?: number | null;
   fullReceived?: boolean;
@@ -153,6 +155,48 @@ export default function AdminDashboard() {
     }
   }
 
+  async function deleteApplication(id: string, name: string) {
+    if (!window.confirm(`Remove ${name}'s application from the active dashboard? Its signed records will be retained and its invitation links disabled.`)) return;
+    setBusy(true);
+    setNotice("");
+    try {
+      const response = await fetch("/api/admin/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", id }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Application could not be removed.");
+      setApplications((current) => current.filter((application) => application.id !== id));
+      if (selected?.id === id) setSelected(null);
+      setNotice("Application removed from the active dashboard. Signed records remain retained; invitation links are disabled.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Application could not be removed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function retryScreeningEmail(id: string) {
+    setBusy(true);
+    setNotice("");
+    try {
+      const response = await fetch("/api/admin/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "retry-screening-email", id }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Screening email delivery failed.");
+      setNotice("The completed screening PDF email was delivered to Moontera; any outstanding driver notification was sent too.");
+      await loadApplications();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Screening email delivery failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function logout() {
     await fetch("/api/admin/auth/logout", { method: "POST" });
     setAuthenticated(false);
@@ -224,16 +268,17 @@ export default function AdminDashboard() {
                     <td><strong>{application.name}</strong><span>{application.email}</span></td>
                     <td>{application.position || "-"}{application.state ? ` · ${application.state}` : ""}</td>
                     <td>{new Date(application.createdAt).toLocaleDateString()}</td>
-                    <td>{application.complete ? `Quick received${application.screeningSigned ? " · Screening received" : application.screeningInviteExpiresAt ? " · Screening invited" : ""}${application.fullReceived ? ` · Full received${application.fullRevisionNumber ? ` (Rev. ${application.fullRevisionNumber})` : ""}` : application.fullInviteExpiresAt ? " · Full invited" : ""}` : "Email delivery pending"}</td>
+                    <td>{application.complete ? `Quick received${application.screeningSigned ? ` · Screening signed${application.screeningOwnerEmailSent ? " · Moontera email sent" : " · Moontera email pending"}${application.screeningApplicantEmailSent ? " · Driver email sent" : ""}` : application.screeningInviteExpiresAt ? " · Screening invited" : ""}${application.fullReceived ? ` · Full received${application.fullRevisionNumber ? ` (Rev. ${application.fullRevisionNumber})` : ""}` : application.fullInviteExpiresAt ? " · Full invited" : ""}` : "Email delivery pending"}</td>
                     <td className="admin-next-step">
                       {application.screeningInviteExpiresAt && <small>Screening expires {new Date(application.screeningInviteExpiresAt).toLocaleDateString()}</small>}
                       {application.screeningInviteExpiresAt && <button className="admin-link-button" type="button" disabled={busy} onClick={() => revokeInvitation(application.id, "screening")}>Revoke Screening</button>}
+                      {application.screeningSigned && !application.screeningOwnerEmailSent && <button className="admin-secondary" type="button" disabled={busy} onClick={() => retryScreeningEmail(application.id)}>Retry screening email</button>}
                       {application.fullInviteExpiresAt && <small>Full invite expires {new Date(application.fullInviteExpiresAt).toLocaleDateString()}</small>}
                       {application.fullInviteExpiresAt && <button className="admin-link-button" type="button" disabled={busy} onClick={() => revokeInvitation(application.id, "full")}>Revoke Full</button>}
                       <button className="admin-secondary" type="button" disabled={busy || !application.complete} onClick={() => sendInvitation(application.id, "screening")}>Screening</button>
                       <button className="admin-secondary" type="button" disabled={busy || !application.screeningSigned} title={application.screeningSigned ? "" : "A signed Screening record is required first"} onClick={() => sendInvitation(application.id, "full")}>Full application</button>
                     </td>
-                    <td><button className="admin-secondary" type="button" disabled={busy} onClick={() => openApplication(application.id)}>View</button></td>
+                    <td><div className="admin-row-actions"><button className="admin-secondary" type="button" disabled={busy} onClick={() => openApplication(application.id)}>View</button><button className="admin-secondary" type="button" disabled={busy} onClick={() => deleteApplication(application.id, application.name)}>Delete</button></div></td>
                   </tr>
                 ))}
               </tbody>
@@ -244,7 +289,7 @@ export default function AdminDashboard() {
       </section>
       {selected && (
         <section className="admin-card admin-detail">
-          <div className="admin-list-heading"><div><p className="admin-eyebrow">APPLICATION {selected.id.slice(0, 8).toUpperCase()}</p><h2>{selected.applicant.full_name}</h2><p>{selected.applicant.email} · Received {new Date(selected.receivedAt).toLocaleString()}</p></div><button className="admin-secondary" type="button" onClick={() => setSelected(null)}>Close</button></div>
+          <div className="admin-list-heading"><div><p className="admin-eyebrow">APPLICATION {selected.id.slice(0, 8).toUpperCase()}</p><h2>{[selected.applicant.first_name, selected.applicant.middle_name, selected.applicant.last_name].filter(Boolean).join(" ") || selected.applicant.full_name}</h2><p>{selected.applicant.email} · Received {new Date(selected.receivedAt).toLocaleString()}</p></div><button className="admin-secondary" type="button" onClick={() => setSelected(null)}>Close</button></div>
           <dl className="admin-fields">
             {Object.entries(selected.applicant).map(([key, value]) => (
               <div key={key}><dt>{key.replaceAll("_", " ")}</dt><dd>{value || "Not provided"}</dd></div>

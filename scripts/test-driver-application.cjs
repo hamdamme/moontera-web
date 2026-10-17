@@ -92,7 +92,9 @@ assert.equal(isAllowedApplicationOrigin("https://attacker.example", "https://pre
 const raw = {
   requestId: id,
   quick: {
-    full_name: "Alex Example",
+    first_name: "Alex",
+    middle_name: "Jordan",
+    last_name: "Example",
     address: "100 Example Street",
     city: "Chicago",
     state: "IL",
@@ -114,10 +116,16 @@ const raw = {
 };
 const quick = validateSubmission("quick", raw);
 assert.equal(quick.email, "alex@example.com");
+assert.equal(quick.name, "Alex Jordan Example");
 assert.equal(quick.quick.ssn_last4, "1234");
 assert.equal(Object.hasOwn(quick.quick, "medical_card_issue"), false);
 assert.equal(quickFields.find((field) => field.key === "ssn_last4").required, true);
 assert.equal(quickFields.some((field) => field.key === "medical_card_issue"), false);
+assert.equal(quickFields.find((field) => field.key === "middle_name").required, undefined);
+assert.equal(validateSubmission("quick", {
+  ...raw,
+  quick: { ...raw.quick, middle_name: "" },
+}).name, "Alex Example");
 assert.throws(() =>
   validateSubmission("quick", {
     ...raw,
@@ -201,6 +209,7 @@ a.current[0] = {
   zip: "60601",
 };
 a.eligibility[0] = { work: "Yes", age: "Yes", previous: "No" };
+a.background[0] = { employed: "Yes", bonded: "No", felony: "No", duties: "No" };
 a.workNotes[0].notes =
   "No previous employment; sample application for testing.";
 a.medical[0].expires = "05/15/2028";
@@ -242,6 +251,10 @@ const draft = sanitizeDraftAnswers({ answers: a }, "alex@example.com");
 assert.equal(draft.personal[0].email, "alex@example.com");
 assert.equal(Object.hasOwn(draft.personal[0], "ssn"), false);
 assert.equal(draft.experience[0].equipment, "Straight Truck");
+assert.deepEqual(
+  [draft.background[0].employed, draft.background[0].bonded, draft.background[0].felony, draft.background[0].duties],
+  ["Yes", "No", "No", "No"],
+);
 assert.equal(sanitizeDraftAnswers({ answers: initialAnswers() }, "alex@example.com").personal[0].email, "alex@example.com");
 const omitted = structuredClone(a);
 omitted.personal = [];
@@ -338,6 +351,15 @@ const deps = {
     ...deps,
     historyKey: (_key, requestId) => `quick-history/${requestId}`,
   };
+  const removedPayload = { ...quick, requestId: "00000000-0000-4000-8000-000000000006" };
+  const removed = await processSubmission("removed-quick", removedPayload, deps);
+  const savedRemoved = await store.read("removed-quick");
+  await store.save("removed-quick", { ...savedRemoved.record, deletedAt: new Date(now).toISOString() }, savedRemoved.version);
+  const afterRemoval = await processSubmission("removed-quick", {
+    ...quick,
+    requestId: "00000000-0000-4000-8000-000000000007",
+  }, historyDeps);
+  assert(afterRemoval.id && afterRemoval.id !== removed.id);
   const reapplication = {
     ...quick,
     requestId: "00000000-0000-4000-8000-000000000002",
