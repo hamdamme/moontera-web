@@ -8,7 +8,8 @@ import "./documents.css";
 type Entry = { name: string; state: string; signature: string; ink: string; mode: string; agreed: boolean; copy: boolean; reviewed: boolean; passenger: string; origin: string; destination: string; start: string; end: string; vin: string };
 const empty = (): Entry => ({ name: "", state: "", signature: "", ink: "", mode: "type", agreed: false, copy: false, reviewed: false, passenger: "", origin: "", destination: "", start: "", end: "", vin: "" });
 const passenger = { id: "passenger", title: "Passenger Authorization Request", sections: [{ title: "Request company approval", body: "A passenger may travel only after Moontera LLC issues written authorization for the specific passenger, vehicle, route, and dates. Completing this request does not grant permission to transport a passenger." }] };
-const all = [...documents, passenger];
+const policyDocuments = documents.filter((item) => item.id !== "mvr" && item.id !== "psp");
+const all = [...policyDocuments, passenger];
 
 function Text({ body }: { body: string }) {
   const paragraphs: string[] = [];
@@ -32,7 +33,7 @@ export default function Documents() {
   const heading = useRef<HTMLHeadingElement>(null);
   const doc = all[active];
   const value = entries[doc.id] || empty();
-  const list = withPassenger ? all : documents;
+  const list = withPassenger ? all : policyDocuments;
   function update(patch: Partial<Entry>) {
     setEntries(e => ({ ...e, [doc.id]: { ...(e[doc.id] || empty()), ...patch, reviewed: false } }));
     setMessage("");
@@ -72,15 +73,15 @@ export default function Documents() {
   }
   const completed = list.filter(d => entries[d.id]?.reviewed).length;
   return <main className="documents-shell">
-    <div className="documents-preview">APPLICATION PREVIEW <span>Use sample information. Nothing is submitted or saved after closing this page.</span></div>
+    <div className="documents-preview">POLICY REVIEW PREVIEW <span>Use sample information. Nothing is submitted or saved after closing this page.</span></div>
     <div className="documents-layout">
       <aside className="documents-sidebar">
         <span className="documents-eyebrow">MOONTERA LLC · DRIVER ONBOARDING</span>
         <h1>Read. Review.<br />Get ready.</h1>
-        <p>Your authorizations and company policies, one document at a time.</p>
+        <p>Review company safety and operational policies, one document at a time.</p>
         <div className="documents-progress"><span>{completed} of {list.length} reviewed</span><progress max={list.length} value={completed} /></div>
         <nav aria-label="Application documents">{list.map((d, i) => <button type="button" aria-current={active === i ? "step" : undefined} key={d.id} onClick={() => go(i)}><span>{entries[d.id]?.reviewed ? "✓" : String(i + 1).padStart(2,"0")}</span>{d.title}</button>)}</nav>
-        <label className="document-check passenger-toggle"><input type="checkbox" checked={withPassenger} onChange={e => { setWithPassenger(e.target.checked); if (!e.target.checked && active === 5) go(0); }} />I plan to request a passenger</label>
+        <label className="document-check passenger-toggle"><input type="checkbox" checked={withPassenger} onChange={e => { setWithPassenger(e.target.checked); if (!e.target.checked && active === policyDocuments.length) go(0); }} />I plan to request a passenger</label>
         <div className="documents-help"><a href="mailto:info@moonterallc.com">info@moonterallc.com</a><a href="tel:+17738825595">773-882-5595</a><a href="/apply" target="_blank" rel="noreferrer">Open driver application ↗</a></div>
       </aside>
       <div className="documents-main">

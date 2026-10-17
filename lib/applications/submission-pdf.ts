@@ -281,6 +281,10 @@ export async function createSubmissionPdf(
     for (const step of steps)
       for (const group of step.groups) {
         heading(group.title);
+        if (group.key === "personal") {
+          paragraph("Social Security Number (SSN) - to be completed by the applicant in person on the printed application.");
+          row([{ label: "SSN (complete in person)", value: "_______ - ____ - _________" }]);
+        }
         if (group.description) paragraph(group.description);
         const allRecords = submission.answers?.[group.key] || [];
         const records =

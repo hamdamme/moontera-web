@@ -110,6 +110,33 @@
   border-color: #e5efe9;
   color: #28724a;
 }
+.apply-document-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 20px;
+  padding: 14px 16px;
+  border: 1px solid #c7d8f5;
+  border-radius: 12px;
+  background: #e4ecfb;
+  color: #17438b;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-decoration: none;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.apply-document-link:hover {
+  background: #d6e3fa;
+  border-color: #a5c2ef;
+}
+.apply-document-link:focus-visible {
+  outline: 3px solid #2364df;
+  outline-offset: 3px;
+}
 .apply-help {
   display: flex;
   flex-direction: column;
@@ -716,3 +743,8 @@
     break-inside: avoid;
   }
 }
+
+/* Keep the Quick Application's grouped fields aligned without native fieldset borders. */
+.quick-fieldset{border:0;padding:0;margin:0;min-width:0}
+.quick-fieldset:disabled{opacity:.72}
+.apply-field input::placeholder{color:#94a3b8}
