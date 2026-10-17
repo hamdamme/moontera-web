@@ -199,6 +199,7 @@ a.personal[0] = {
   first: "José",
   last: "Example",
   dob: "05/15/1990",
+  ssn: "123-45-6789",
   startDate: "11/01/2026",
 };
 a.current[0] = {
@@ -217,7 +218,12 @@ assert.equal(steps.flatMap((step) => step.groups).some((g) => g.key === "clearin
 assert.equal(steps.flatMap((step) => step.groups).some((g) => g.key === "communications"), false);
 assert.equal(steps.flatMap((step) => step.groups).some((g) => g.fields.some((f) => f.key === "lastTest")), false);
 assert.equal(steps.flatMap((step) => step.groups).find((g) => g.key === "licenses").fields.some((f) => f.key === "issued"), true);
-assert.equal(steps.flatMap((step) => step.groups).some((g) => g.fields.some((f) => f.type === "ssn")), false);
+const personalFields = steps.flatMap((step) => step.groups).find((g) => g.key === "personal").fields;
+assert.deepEqual(personalFields.slice(0, 7).map((f) => f.key), [
+  "first", "middle", "last", "position", "otherPosition", "dob", "ssn",
+]);
+assert.equal(personalFields.find((f) => f.key === "ssn").required, true);
+assert.equal(formatValue(personalFields.find((f) => f.key === "ssn"), "123456789"), "123-45-6789");
 assert.equal(steps.flatMap((step) => step.groups).some((g) => g.key === "drugTestAuthorization"), true);
 const experienceGroup = steps.flatMap((step) => step.groups).find((g) => g.key === "experience");
 assert.deepEqual(experienceGroup.fixedRows, [
@@ -245,7 +251,20 @@ const full = validateSubmission("full", {
 });
 assert.equal(full.answers.experience[0].equipment, "Straight Truck");
 assert.equal(full.answers.experience.filter((row) => row.selected === "Yes").length, 1);
-assert.equal(Object.hasOwn(full.answers.personal[0], "ssn"), false);
+assert.equal(full.answers.personal[0].ssn, "123-45-6789");
+assert.deepEqual(validateStep(0, full.answers), {});
+assert.throws(() =>
+  validateSubmission("full", {
+    requestId: id,
+    answers: {
+      ...a,
+      personal: [{ ...a.personal[0], ssn: "12345" }],
+    },
+    certified: true,
+    signature: { mode: "type", name: "José Example", image: "" },
+  }),
+  /Social Security number/,
+);
 assert.equal(full.answers.drugTestAuthorization[0].authorized, "I agree");
 const draft = sanitizeDraftAnswers({ answers: a }, "alex@example.com");
 assert.equal(draft.personal[0].email, "alex@example.com");

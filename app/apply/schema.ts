@@ -80,6 +80,9 @@ export const steps: Step[] = [
             when: ["position", "Other"],
           }),
           f("dob", "Date of birth", "date", true, { past: true }),
+          f("ssn", "Social Security number", "text", true, {
+            hint: "Enter as 000-00-0000. This is saved only when you submit the application.",
+          }),
           f("phone", "Phone number", "phone", true),
           f("email", "Email address", "email", true, { readOnly: true }),
           f("startDate", "Available start date", "date", true),
@@ -492,6 +495,12 @@ export const visible = (f: Field, row: Record<string, string>) =>
   !(f.key === "other" && row.equipment && row.equipment !== "Other");
 export const path = (g: string, i: number, k: string) => `${g}.${i}.${k}`;
 export function formatValue(f: Field, v: string) {
+  if (f.key === "ssn") {
+    const digits = v.replace(/\D/g, "").slice(0, 9);
+    return [digits.slice(0, 3), digits.slice(3, 5), digits.slice(5)]
+      .filter(Boolean)
+      .join("-");
+  }
   if (f.type === "date" || f.type === "month") {
     const d = v.replace(/\D/g, "").slice(0, f.type === "date" ? 8 : 6);
     return (
@@ -550,6 +559,8 @@ export function validateStep(step: number, a: Answers) {
             e = "Enter a valid email address.";
           if (f.type === "phone" && !/^\d{3}-\d{3}-\d{4}$/.test(v))
             e = "Enter a 10-digit phone number.";
+          if (f.key === "ssn" && !/^\d{3}-\d{2}-\d{4}$/.test(v))
+            e = "Enter a 9-digit Social Security number.";
           if (f.key === "zip" && !/^\d{5}(-\d{4})?$/.test(v))
             e = "Enter a 5- or 9-digit ZIP code.";
           if (f.options && !f.options.includes(v))

@@ -138,6 +138,7 @@ export function sanitizeDraftAnswers(input: unknown, verifiedEmail: string): Ans
         ? { equipment: group.fixedRows[index] }
         : {};
       for (const field of group.fields) {
+        if (field.key === "ssn") continue;
         cleaned[field.key] = text(
           row[field.key],
           field.type === "textarea" ? 4000 : field.key === "email" ? 254 : 300,
@@ -165,6 +166,8 @@ export function sanitizeDraftAnswers(input: unknown, verifiedEmail: string): Ans
             throw new InputError("Enter a valid email address.");
           if (field.type === "phone" && !/^\d{3}-\d{3}-\d{4}$/.test(value))
             throw new InputError("Enter a 10-digit phone number.");
+          if (field.key === "ssn" && !/^\d{3}-\d{2}-\d{4}$/.test(value))
+            throw new InputError("Enter a 9-digit Social Security number.");
           if (field.type === "number" && !/^\d{1,9}$/.test(value))
             throw new InputError("Enter a whole number using digits only.");
           if (field.type === "date" || field.type === "month") {
