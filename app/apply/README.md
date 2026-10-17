@@ -1,6 +1,6 @@
 # Driver applications
 
-- `/application/details`: Quick Application, a single scrolling page with contact, position, CDL, DOT medical card, last drug test details, and optional SSN last four. No separate consent is gathered.
+- `/application/details`: Quick Application, a single scrolling page with contact, position, CDL, DOT medical card, last drug test details, and required SSN last four. The Quick Application does not ask for the DOT medical card issue date. No separate consent is gathered.
 - `/apply`: Full Driver Application with employment/driving history, CDL, medical/DOT fields, Clearinghouse acknowledgment and optional SMS consent.
 - `/application`: redirects to `/apply`.
 - `/apply/documents`: company policy **previews** only. MVR and PSP screening authorizations are no longer listed here and are not part of the Quick Application.

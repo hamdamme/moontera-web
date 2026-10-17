@@ -2,8 +2,9 @@ import { createHmac } from "node:crypto";
 import { getAdminSession, validAdminOrigin } from "@/lib/onboarding/admin-auth";
 import { findQuickRecord, listApplicationRecords, toApplicationSummary } from "@/lib/onboarding/records";
 import { activeInvitationStatus, issueInvitation, revokeInvitation, type InvitationPurpose } from "@/lib/onboarding/invitations";
-import { readPrivate } from "@/lib/onboarding/private-store";
+import { readPrivate, updatePrivate } from "@/lib/onboarding/private-store";
 import type { RecordData } from "@/lib/applications/workflow";
+import { deliverScreeningRecord } from "@/lib/screening/delivery";
 import { JsonBodyError, readJsonBody } from "@/lib/http/read-json-body";
 
 export const runtime = "nodejs";
@@ -18,9 +19,12 @@ export async function GET(request: Request) {
     const result = await listApplicationRecords(cursor);
     const applications = await Promise.all(
       result.records.map(async ({ record }) => {
-        const screening = await readPrivate<{ signedAt?: string }>(
+        const screening = await readPrivate<{ signedAt?: string; recordPath?: string }>(
           `onboarding/screening/${record.id}.json`,
         );
+        const screeningEmail = screening?.value.recordPath
+          ? await readPrivate<{ ownerEmailId?: string; applicantEmailId?: string }>(screening.value.recordPath)
+          : null;
         const [screeningInvite, fullInvite] = await Promise.all([
           activeInvitationStatus(record.id, "screening"),
           activeInvitationStatus(record.id, "full"),
@@ -33,6 +37,8 @@ export async function GET(request: Request) {
         return {
           ...toApplicationSummary(record),
           screeningSigned: !!screening?.value.signedAt,
+          screeningOwnerEmailSent: !!screeningEmail?.value.ownerEmailId,
+          screeningApplicantEmailSent: !!screeningEmail?.value.applicantEmailId,
           screeningInviteExpiresAt: screeningInvite?.expiresAt || null,
           fullInviteExpiresAt: fullInvite?.expiresAt || null,
           fullReceived: !!fullRecord?.value.complete && fullRecord.value.payload.kind === "full",
@@ -60,6 +66,38 @@ export async function POST(request: Request) {
     if (!(await getAdminSession(request)))
       return Response.json({ message: "Sign in required." }, { status: 401, headers: { "Cache-Control": "no-store" } });
     const body = await readJsonBody(request, 8192);
+    if (body?.action === "retry-screening-email") {
+      if (typeof body.id !== "string" || !/^[a-f0-9-]{36}$/i.test(body.id))
+        return Response.json({ message: "Invalid application request." }, { status: 400 });
+      const located = await findQuickRecord(body.id);
+      if (!located) return Response.json({ message: "Application not found." }, { status: 404 });
+      const pointer = await readPrivate<{ quickId?: string; recordPath?: string; signedAt?: string }>(`onboarding/screening/${body.id}.json`);
+      if (pointer?.value.quickId !== body.id || !pointer.value.signedAt || !pointer.value.recordPath?.startsWith(`onboarding/screening/records/${body.id}/`))
+        return Response.json({ message: "There is no signed Screening record to deliver." }, { status: 404 });
+      try {
+        const record = await deliverScreeningRecord(pointer.value.recordPath);
+        return Response.json({ success: true, ownerEmailSent: !!record.ownerEmailId, applicantEmailSent: !!record.applicantEmailId }, { headers: { "Cache-Control": "no-store" } });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Screening email delivery failed.";
+        return Response.json({ message }, { status: 503, headers: { "Cache-Control": "no-store" } });
+      }
+    }
+    if (body?.action === "delete") {
+      if (typeof body.id !== "string" || !/^[a-f0-9-]{36}$/i.test(body.id))
+        return Response.json({ message: "Invalid application request." }, { status: 400 });
+      const located = await findQuickRecord(body.id);
+      if (!located) return Response.json({ message: "Application not found." }, { status: 404 });
+      if (located.record.deletedAt)
+        return Response.json({ success: true, deleted: true }, { headers: { "Cache-Control": "no-store" } });
+      const deletedAt = new Date().toISOString();
+      const current = await readPrivate<RecordData>(located.pathname);
+      if (!current || current.value.id !== body.id)
+        return Response.json({ message: "Application not found." }, { status: 404 });
+      const saved = await updatePrivate(located.pathname, { ...current.value, deletedAt }, current.etag);
+      if (!saved)
+        return Response.json({ message: "The application changed while being removed. Reload and retry." }, { status: 409, headers: { "Cache-Control": "no-store" } });
+      return Response.json({ success: true, deleted: true, deletedAt }, { headers: { "Cache-Control": "no-store" } });
+    }
     if (body?.action === "revoke-invitation") {
       const purposeValue = body.purpose;
       if (

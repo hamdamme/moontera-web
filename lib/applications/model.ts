@@ -19,7 +19,9 @@ export type QuickField = {
   when?: [string, string];
 };
 export const quickFields: QuickField[] = [
-  { key: "full_name", label: "Full legal name", type: "text", required: true },
+  { key: "first_name", label: "First name", type: "text", required: true },
+  { key: "middle_name", label: "Middle name", type: "text" },
+  { key: "last_name", label: "Last name", type: "text", required: true },
   { key: "address", label: "Street address", type: "text", required: true },
   { key: "city", label: "City", type: "text", required: true },
   { key: "state", label: "State", type: "select", required: true, options: states },
@@ -39,7 +41,6 @@ export const quickFields: QuickField[] = [
   { key: "cdl_state", label: "CDL issuing state", type: "select", required: true, options: states },
   { key: "cdl_class", label: "CDL class", type: "select", required: true, options: ["Class A", "Class B", "Class C", "Other"] },
   { key: "cdl_expiration", label: "CDL expiration date", type: "date", required: true },
-  { key: "medical_card_issue", label: "DOT medical card issue date", type: "date", required: true },
   { key: "medical_card_expiration", label: "DOT medical card expiration date", type: "date", required: true },
   {
     key: "drug_test_status",
@@ -57,8 +58,9 @@ export const quickFields: QuickField[] = [
   },
   {
     key: "ssn_last4",
-    label: "Last four digits of SSN (optional)",
+    label: "Last four digits of SSN",
     type: "text",
+    required: true,
     maxLength: 4,
     pattern: "[0-9]{4}",
     inputMode: "numeric",
@@ -215,7 +217,6 @@ export function validateSubmission(
       "dob",
       "start_date",
       "cdl_expiration",
-      "medical_card_issue",
       "medical_card_expiration",
       ...(quick.drug_test_status === "Yes" ? ["drug_test_date"] : []),
     ]) {
@@ -230,13 +231,13 @@ export function validateSubmission(
       throw new InputError("Date of birth cannot be in the future.");
     if (!/^\+?1?\d{10}$/.test(quick.phone.replace(/[\s().-]/g, "")))
       throw new InputError("Enter a valid phone number.");
-    if (quick.ssn_last4 && !/^\d{4}$/.test(quick.ssn_last4))
-      throw new InputError("Enter exactly four digits for the optional SSN field.");
+    if (!/^\d{4}$/.test(quick.ssn_last4))
+      throw new InputError("Enter exactly four digits for the last four SSN digits.");
     result = {
       kind,
       requestId,
       email: normalizeEmail(quick.email),
-      name: quick.full_name,
+      name: [quick.first_name, quick.middle_name, quick.last_name].filter(Boolean).join(" "),
       quick,
       certified: false,
     };

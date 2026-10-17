@@ -1,8 +1,10 @@
-import { getFullApplicantSession } from "@/lib/onboarding/full-auth";
+import { createFullApplicantSession, fullSessionCookie, getFullApplicantSession } from "@/lib/onboarding/full-auth";
 import { initialAnswers, type Answers } from "@/app/apply/schema";
 import { readPrivate } from "@/lib/onboarding/private-store";
 import { createHmac } from "node:crypto";
 import type { RecordData } from "@/lib/applications/workflow";
+import { validAdminOrigin } from "@/lib/onboarding/admin-auth";
+import { JsonBodyError, readJsonBody } from "@/lib/http/read-json-body";
 
 export const runtime = "nodejs";
 
@@ -25,6 +27,38 @@ function splitName(value: string) {
   const parts = value.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 2) return { first: parts[0], middle: "", last: parts[1] };
   return { first: value.trim(), middle: "", last: "" };
+}
+
+export async function POST(request: Request) {
+  if (!validAdminOrigin(request))
+    return Response.json({ message: "Invalid request origin." }, { status: 403 });
+  try {
+    const body = await readJsonBody(request, 4096);
+    const token = typeof body?.token === "string" ? body.token : "";
+    const session = await createFullApplicantSession(token);
+    if (!session)
+      return Response.json(
+        { message: "This Full Application invitation is invalid or expired." },
+        { status: 401, headers: { "Cache-Control": "no-store" } },
+      );
+    const secure = new URL(request.url).protocol === "https:";
+    return Response.json(
+      { success: true },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+          "Set-Cookie": fullSessionCookie(session.sessionToken, secure),
+        },
+      },
+    );
+  } catch (error) {
+    if (error instanceof JsonBodyError)
+      return Response.json({ message: error.message }, { status: error.status });
+    return Response.json(
+      { message: "The invitation could not be opened." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 }
 
 function oldAddress(value: string) {
@@ -52,7 +86,9 @@ export async function GET(request: Request) {
     const answers = initialAnswers();
     answers.personal[0] = {
       ...answers.personal[0],
-      ...splitName(stored.value.payload.name),
+      ...(quick.first_name && quick.last_name
+        ? { first: quick.first_name, middle: quick.middle_name || "", last: quick.last_name }
+        : splitName(stored.value.payload.name)),
       position: quick.position || "",
       dob: displayDate(quick.dob || ""),
       phone: quick.phone || "",

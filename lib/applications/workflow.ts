@@ -12,6 +12,7 @@ export type RecordData = {
   attemptStartedAt?: number;
   complete: boolean;
   completedAt?: string;
+  deletedAt?: string;
 };
 export type Versioned = { record: RecordData; version: string };
 export interface Store {
@@ -89,10 +90,9 @@ export async function processSubmission(
     const cooldownMs = 90 * 24 * 60 * 60 * 1000;
     if (
       payload.kind !== "quick" ||
-      !record.complete ||
+      (!record.deletedAt && !record.complete) ||
       record.leaseUntil > now() ||
-      !Number.isFinite(completedAt) ||
-      now() - completedAt < cooldownMs
+      (!record.deletedAt && (!Number.isFinite(completedAt) || now() - completedAt < cooldownMs))
     )
       throw new SubmissionError(
         payload.kind === "quick" ? 429 : 409,
