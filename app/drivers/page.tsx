@@ -46,7 +46,6 @@ export default function DriversPage() {
             >
               Start Quick Application
             </Link>
-            <span className="rounded-full border border-white/30 px-8 py-4 text-center text-sm font-semibold text-slate-200">Full Application by invitation after review</span>
           </div>
         </div>
       </section>
@@ -118,29 +117,15 @@ export default function DriversPage() {
         <div className="mx-auto max-w-7xl">
           <div className="max-w-3xl">
             <p className="text-sm font-bold uppercase tracking-[0.3em] text-blue-400">
-              Application Options
+              Start Your Application
             </p>
 
             <h2 className="mt-4 text-4xl font-bold tracking-tight md:text-5xl">
-              Choose the application that fits your situation.
+              Start with a quick application.
             </h2>
           </div>
 
-          <div className="mt-12 grid gap-6 md:grid-cols-2">
-            <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8">
-              <p className="text-sm font-bold text-blue-400">
-                Full Driver Application
-              </p>
-              <h3 className="mt-4 text-2xl font-bold">
-                Complete your driver application
-              </h3>
-              <p className="mt-4 leading-7 text-slate-300">
-                Complete the Full Driver Application using the secure link our
-                team sends after reviewing your Quick Application.
-              </p>
-              <p className="mt-8 text-sm font-semibold text-blue-300">Invitation required</p>
-            </div>
-
+          <div className="mt-12 max-w-2xl">
             <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8">
               <p className="text-sm font-bold text-blue-400">
                 Quick Application
@@ -149,9 +134,8 @@ export default function DriversPage() {
                 Start with your contact details
               </h3>
               <p className="mt-4 leading-7 text-slate-300">
-                Provide your contact, CDL, medical-card, and limited screening
-                intake details. Our team reviews every application before
-                sending the next secure invitation.
+                Share your contact and driving details to get started. Our
+                team will review your application and follow up with next steps.
               </p>
 
               <Link

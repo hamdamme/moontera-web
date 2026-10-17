@@ -33,7 +33,7 @@ execFileSync(
   ],
   { cwd: root, stdio: "inherit" },
 );
-const { validateSubmission, sanitizeDraftAnswers } = require(
+const { validateSubmission, sanitizeDraftAnswers, quickFields } = require(
   path.join(tmp, "lib/applications/model.js"),
 );
 const { processSubmission } = require(
@@ -106,7 +106,6 @@ const raw = {
     cdl_state: "IL",
     cdl_class: "Class A",
     cdl_expiration: "2028-06-30",
-    medical_card_issue: "2026-01-01",
     medical_card_expiration: "2028-01-01",
     drug_test_status: "No",
     drug_test_date: "",
@@ -116,11 +115,17 @@ const raw = {
 const quick = validateSubmission("quick", raw);
 assert.equal(quick.email, "alex@example.com");
 assert.equal(quick.quick.ssn_last4, "1234");
+assert.equal(Object.hasOwn(quick.quick, "medical_card_issue"), false);
+assert.equal(quickFields.find((field) => field.key === "ssn_last4").required, true);
+assert.equal(quickFields.some((field) => field.key === "medical_card_issue"), false);
 assert.throws(() =>
   validateSubmission("quick", {
     ...raw,
     quick: { ...raw.quick, ssn_last4: "123" },
   }),
+);
+assert.throws(() =>
+  validateSubmission("quick", { ...raw, quick: { ...raw.quick, ssn_last4: "" } }),
 );
 assert.throws(() =>
   validateSubmission("quick", {

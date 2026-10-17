@@ -74,7 +74,6 @@ export default function QuickApplication() {
           <div className="apply-help">
             <a href="tel:+17738825595">773-882-5595</a>
             <a href="mailto:info@moonterallc.com">info@moonterallc.com</a>
-            <a href="/apply">Full Driver Application →</a>
           </div>
         </aside>
         <section className="apply-main">
@@ -90,9 +89,7 @@ export default function QuickApplication() {
                 Please do not submit this application again. Contact us if you
                 need to make a correction.
               </p>
-              <a href="/apply" className="apply-primary">
-                Continue to Full Driver Application →
-              </a>
+              <p>Our team will review your application and contact you about next steps.</p>
             </div>
           ) : (
             <form onSubmit={submit}>
@@ -100,7 +97,7 @@ export default function QuickApplication() {
                 <h2>General information</h2>
                 <p className="apply-card-description">
                   Complete the required fields. We never ask for your full
-                  Social Security number; the last four digits are optional.
+                  Social Security number. Please provide the last four digits.
                 </p>
                 <fieldset
                   disabled={busy || pendingSubmission}
