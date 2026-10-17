@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- CommonJS test harness. */
 const assert = require("node:assert/strict"),
   fs = require("node:fs"),
   path = require("node:path"),
@@ -176,8 +177,52 @@ const deps = {
       { ...quick, requestId: "00000000-0000-4000-8000-000000000002" },
       deps,
     ),
-    (e) => e.status === 409,
+    (e) => e.status === 429,
   );
+  const historyDeps = {
+    ...deps,
+    historyKey: (_key, requestId) => `quick-history/${requestId}`,
+  };
+  const reapplication = {
+    ...quick,
+    requestId: "00000000-0000-4000-8000-000000000002",
+  };
+  now += 89 * 24 * 60 * 60 * 1000;
+  await assert.rejects(
+    processSubmission("quick", reapplication, historyDeps),
+    (e) => e.status === 429,
+  );
+  now += 24 * 60 * 60 * 1000;
+  sends = [];
+  const second = await processSubmission("quick", reapplication, historyDeps);
+  assert(second.id && second.id !== first.id);
+  assert.deepEqual(sends, ["owner", "applicant"]);
+  const archived = await store.read(`quick-history/${quick.requestId}`);
+  assert.equal(archived.record.id, first.id);
+  assert.equal(archived.record.complete, true);
+  sends = [];
+  const retryFirst = await processSubmission("quick", quick, historyDeps);
+  assert.equal(retryFirst.id, first.id);
+  assert.equal(retryFirst.alreadySubmitted, true);
+  assert.deepEqual(sends, []);
+
+  await processSubmission("rotate-race", quick, historyDeps);
+  now += 90 * 24 * 60 * 60 * 1000;
+  sends = [];
+  const competing = await Promise.allSettled([
+    processSubmission(
+      "rotate-race",
+      { ...quick, requestId: "00000000-0000-4000-8000-000000000003" },
+      historyDeps,
+    ),
+    processSubmission(
+      "rotate-race",
+      { ...quick, requestId: "00000000-0000-4000-8000-000000000004" },
+      historyDeps,
+    ),
+  ]);
+  assert.equal(competing.filter((r) => r.status === "fulfilled").length, 1);
+  assert.deepEqual(sends, ["owner", "applicant"]);
   sends = [];
   const concurrent = await Promise.allSettled([
     processSubmission("race", quick, deps),

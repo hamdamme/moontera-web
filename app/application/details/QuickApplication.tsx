@@ -6,6 +6,7 @@ import "../../apply/application.css";
 
 export default function QuickApplication() {
   const [busy, setBusy] = useState(false),
+    [pendingSubmission, setPendingSubmission] = useState(false),
     [message, setMessage] = useState(""),
     [receipt, setReceipt] = useState("");
   const sending = useRef(false);
@@ -26,6 +27,7 @@ export default function QuickApplication() {
           quick,
           requestId: await submissionId("quick", quick.email),
         };
+        setPendingSubmission(true);
       }
       const response = await fetch("/api/application/quick", {
         method: "POST",
@@ -34,7 +36,10 @@ export default function QuickApplication() {
       });
       const result = await response.json();
       if (!response.ok || !result.success) {
-        if (response.status === 400) pending.current = null;
+        if (response.status === 400 || response.status === 429) {
+          pending.current = null;
+          setPendingSubmission(false);
+        }
         throw Error(result.message || "Submission failed. Please retry.");
       }
       setReceipt(result.id);
@@ -95,7 +100,7 @@ export default function QuickApplication() {
                   requested.
                 </p>
                 <fieldset
-                  disabled={busy || !!pending.current}
+                  disabled={busy || pendingSubmission}
                   style={{ border: 0, padding: 0, margin: 0 }}
                 >
                   <div className="apply-grid">
@@ -150,7 +155,7 @@ export default function QuickApplication() {
               <button className="apply-primary" type="submit" disabled={busy}>
                 {busy
                   ? "Submitting…"
-                  : pending.current
+                  : pendingSubmission
                     ? "Retry submission"
                     : "Submit Quick Application"}
               </button>

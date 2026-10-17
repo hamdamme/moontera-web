@@ -129,6 +129,13 @@ export async function handleApplication(
     const resend = new Resend(process.env.RESEND_API_KEY);
     const result = await processSubmission(key, payload, {
       store,
+      historyKey:
+        kind === "quick"
+          ? (currentKey, requestId) => {
+              const emailHash = path.basename(currentKey, ".json");
+              return `applications/quick/history/${emailHash}/${requestId}.json`;
+            }
+          : undefined,
       pdf: async (submission, id, date) => {
         const [font, template] = await Promise.all([
           readFile(path.join(process.cwd(), "public/fonts/Geist-Regular.ttf")),

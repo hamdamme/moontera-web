@@ -27,6 +27,7 @@ export default function Application() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [receipt, setReceipt] = useState("");
+  const [pendingSubmission, setPendingSubmission] = useState(false);
   const sending = useRef(false);
   const pending = useRef<Record<string, unknown> | null>(null);
   const [signatureMode, setSignatureMode] = useState("type");
@@ -108,7 +109,7 @@ export default function Application() {
       error = errors[id];
     const props = {
       id,
-      disabled: busy || !!pending.current,
+      disabled: busy || pendingSubmission,
       value,
       onChange: (
         e: React.ChangeEvent<
@@ -127,7 +128,7 @@ export default function Application() {
         <fieldset
           className="apply-question"
           key={id}
-          disabled={busy || !!pending.current}
+          disabled={busy || pendingSubmission}
         >
           <legend>
             {f.label}
@@ -143,7 +144,6 @@ export default function Application() {
                   value={v}
                   checked={value === v}
                   onChange={() => update(g, i, f, v)}
-                  aria-invalid={!!error}
                   aria-describedby={error ? `${id}-error` : undefined}
                 />
                 {v}
@@ -328,6 +328,7 @@ export default function Application() {
           certified: agreed,
           requestId: await submissionId("full", answers.personal[0].email),
         };
+      setPendingSubmission(true);
       const response = await fetch("/api/application/full", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -335,7 +336,10 @@ export default function Application() {
       });
       const result = await response.json();
       if (!response.ok || !result.success) {
-        if (response.status === 400) pending.current = null;
+        if (response.status === 400) {
+          pending.current = null;
+          setPendingSubmission(false);
+        }
         throw Error(
           result.message || "Could not submit your application. Please retry.",
         );
@@ -402,7 +406,7 @@ export default function Application() {
                 <li key={s}>
                   <button
                     type="button"
-                    disabled={i > step || busy || !!pending.current}
+                    disabled={i > step || busy || pendingSubmission}
                     aria-current={step === i ? "step" : undefined}
                     className={
                       step === i ? "active" : i < step ? "complete" : ""
@@ -496,7 +500,7 @@ export default function Application() {
                             <button
                               type="button"
                               className="apply-link"
-                              disabled={busy || !!pending.current}
+                              disabled={busy || pendingSubmission}
                               onClick={() => {
                                 setAnswers((a) => ({
                                   ...a,
@@ -520,7 +524,7 @@ export default function Application() {
                   ))}
                   {g.repeat && (
                     <button
-                      disabled={busy || !!pending.current}
+                      disabled={busy || pendingSubmission}
                       className="apply-add"
                       type="button"
                       onClick={() => {
@@ -560,7 +564,7 @@ export default function Application() {
                     <button
                       className="apply-link"
                       type="button"
-                      disabled={busy || !!pending.current}
+                      disabled={busy || pendingSubmission}
                       onClick={() => go(i)}
                     >
                       Edit {s.title.toLowerCase()}
@@ -721,7 +725,7 @@ export default function Application() {
                 >
                   {busy
                     ? "Submitting…"
-                    : pending.current
+                    : pendingSubmission
                       ? "Retry submission"
                       : "Submit Full Driver Application"}{" "}
                   <span>→</span>
