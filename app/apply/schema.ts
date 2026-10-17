@@ -252,6 +252,7 @@ export const steps: Step[] = [
           f("class", "License class", "select", true, {
             options: ["Class A", "Class B", "Class C", "Other"],
           }),
+          f("issued", "License issue date", "date", true, { past: true }),
           f("expires", "Expiration date", "date", true),
           f("endorsements", "Endorsements"),
         ],
@@ -338,31 +339,7 @@ export const steps: Step[] = [
         title: "Medical card & DOT information",
         fields: [
           f("expires", "Medical card expiration date", "date", true),
-          f("lastTest", "Last drug and alcohol test date", "date", false, {
-            past: true,
-            hint: "Leave empty if you have not previously taken a DOT test.",
-          }),
         ],
-      },
-      {
-        key: "clearinghouse",
-        title: "FMCSA Drug & Alcohol Clearinghouse consent",
-        description:
-          "I authorize Moontera LLC to conduct required FMCSA Drug & Alcohol Clearinghouse queries as permitted under 49 CFR Part 382, including pre-employment and annual limited queries. I understand that full queries, including the pre-employment full query, require my separate electronic consent in the FMCSA Clearinghouse portal. Refusal to provide required consent may prevent me from performing safety-sensitive duties, including operating a commercial motor vehicle.",
-        fields: [
-          f("consent", "Clearinghouse acknowledgment", "select", true, {
-            options: ["I have read and agree"],
-          }),
-          f("signature", "Typed full name / consent signature", "text", true),
-          f("date", "Consent date", "date", true, { past: true }),
-        ],
-      },
-      {
-        key: "communications",
-        title: "Optional SMS consent",
-        description:
-          "I consent to receive conversational and informational SMS messages from Moontera LLC regarding my inquiry. Reply STOP to opt out or HELP for support. Message and data rates may apply. Messaging frequency may vary. SMS consent is optional and is not required to apply. See our Privacy Policy and Terms of Use in the footer.",
-        fields: [f("sms", "May we send you SMS updates?", "yesno", false)],
       },
       {
         key: "experience",
@@ -466,8 +443,18 @@ export const steps: Step[] = [
         ],
       },
       {
+        key: "drugAuthorization",
+        title: "Authorization to obtain past drug & alcohol test results",
+        description:
+          "I authorize Moontera LLC to obtain DOT-required drug and alcohol testing records from previous employers, including positive test results, refusals, and return-to-duty documentation, where permitted by federal regulations. I authorize Moontera LLC to contact companies for which I worked or applied as a driver during the past two (2) years, subject to applicable federal requirements. This authorization does not replace official FMCSA Clearinghouse consent.",
+        fields: [
+          f("acknowledgment", "I authorize the permitted prior drug and alcohol record requests described above", "select", true, {options:["I authorize"]}),
+          f("signature", "Typed full legal name / authorization signature", "text", true)
+        ]
+      },
+      {
         key: "testEmployers",
-        title: "Previous employers / applications (past two years)",
+        title: "Previous employers / applications for drug and alcohol records (past two years)",
         repeat: true,
         minimum: 0,
         item: "company",
