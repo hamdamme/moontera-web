@@ -12,6 +12,7 @@ import {
 } from "./workflow";
 import { createSubmissionPdf } from "./submission-pdf";
 import { createPrivate, readPrivate, updatePrivate } from "@/lib/onboarding/private-store";
+import { isAllowedApplicationOrigin } from "./origin";
 
 const store: Store = {
   async read(key) {
@@ -90,15 +91,7 @@ export async function handleApplication(
   verifiedEmail?: string,
 ) {
   try {
-    const origin = request.headers.get("origin");
-    if (
-      origin &&
-      ![
-        "https://www.moonterallc.com",
-        "https://moonterallc.com",
-        new URL(request.url).origin,
-      ].includes(origin)
-    )
+    if (!isAllowedApplicationOrigin(request.headers.get("origin"), request.url))
       return reply({ success: false, message: "Invalid request origin." }, 403);
     if (!request.headers.get("content-type")?.includes("application/json"))
       return reply(

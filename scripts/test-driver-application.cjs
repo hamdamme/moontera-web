@@ -17,6 +17,7 @@ execFileSync(
     "lib/applications/model.ts",
     "lib/applications/workflow.ts",
     "lib/applications/submission-pdf.ts",
+    "lib/applications/origin.ts",
     "lib/screening/pdf.ts",
     "lib/onboarding/draft-lifecycle.ts",
     "lib/screening/disclosure-approval.ts",
@@ -36,6 +37,9 @@ const { validateSubmission, sanitizeDraftAnswers } = require(
 );
 const { processSubmission } = require(
   path.join(tmp, "lib/applications/workflow.js"),
+);
+const { isAllowedApplicationOrigin } = require(
+  path.join(tmp, "lib/applications/origin.js"),
 );
 const { createSubmissionPdf } = require(
   path.join(tmp, "lib/applications/submission-pdf.js"),
@@ -76,6 +80,11 @@ assert.equal(screeningTermsAreApproved("true", undefined, "one year"), false);
 assert.equal(screeningTermsAreApproved("true", "Approved period: one year", ""), false);
 assert.equal(screeningTermsAreApproved("true", "Approved period: two years", "one year"), false);
 assert.equal(screeningTermsAreApproved("true", "Approved period: ONE YEAR", "one year"), true);
+assert.equal(isAllowedApplicationOrigin(null, "https://www.moonterallc.com/api/application/quick"), false);
+assert.equal(isAllowedApplicationOrigin("https://www.moonterallc.com", "https://preview.example/api/application/quick"), true);
+assert.equal(isAllowedApplicationOrigin("https://moonterallc.com", "https://preview.example/api/application/quick"), true);
+assert.equal(isAllowedApplicationOrigin("https://preview.example", "https://preview.example/api/application/quick"), true);
+assert.equal(isAllowedApplicationOrigin("https://attacker.example", "https://preview.example/api/application/quick"), false);
 const raw = {
   requestId: id,
   quick: {
@@ -411,6 +420,6 @@ const deps = {
   fs.writeFileSync(path.join(out, "Moontera-screening-sample.pdf"), screeningPdf);
   assert(screeningPdf.length > 1000 && revisedPdf.length > 1000);
   console.log(
-    "PASS: validation, missing groups, date checks, email normalization, screening release gate, draft retention deadlines, concurrent duplicate prevention, repeat requests, partial email retry, timeout cutoff, and formatted PDFs.",
+    "PASS: validation, request origins, missing groups, date checks, email normalization, screening release gate, draft retention deadlines, concurrent duplicate prevention, repeat requests, partial email retry, timeout cutoff, and formatted PDFs.",
   );
 })().finally(() => fs.rmSync(tmp, { recursive: true, force: true }));
