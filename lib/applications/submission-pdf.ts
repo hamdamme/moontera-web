@@ -9,6 +9,7 @@ export async function createSubmissionPdf(
   createdAt: string,
   fontBytes: Uint8Array,
   templateBytes?: Uint8Array,
+  revisionNumber?: number,
 ) {
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
@@ -207,11 +208,65 @@ export async function createSubmissionPdf(
     });
     y -= height + 9;
   };
+  const blankField = (label: string, height = 42) => {
+    ensure(height + 10);
+    page.drawRectangle({
+      x: 48,
+      y: y - height,
+      width: 516,
+      height,
+      color: rgb(1, 1, 1),
+      borderColor: border,
+      borderWidth: 0.8,
+    });
+    page.drawText(label, { x: 56, y: y - 14, size: 8, font, color: gray });
+    page.drawLine({
+      start: { x: 56, y: y - height + 8 },
+      end: { x: 556, y: y - height + 8 },
+      color: border,
+      thickness: 0.6,
+    });
+    y -= height + 9;
+  };
+  const hiredCheckboxes = () => {
+    const height = 44;
+    ensure(height + 10);
+    page.drawRectangle({
+      x: 48,
+      y: y - height,
+      width: 516,
+      height,
+      color: pale,
+      borderColor: border,
+      borderWidth: 0.7,
+    });
+    page.drawText("Applicant hired", {
+      x: 56,
+      y: y - 13,
+      size: 8,
+      font,
+      color: gray,
+    });
+    for (const [label, x] of [["Yes", 160], ["No", 228]] as const) {
+      page.drawRectangle({
+        x,
+        y: y - 35,
+        width: 11,
+        height: 11,
+        borderColor: gray,
+        borderWidth: 0.8,
+      });
+      page.drawText(label, { x: x + 17, y: y - 34, size: 10, font, color: navy });
+    }
+    y -= height + 9;
+  };
   start();
   paragraph(
     `Received: ${new Date(createdAt).toLocaleDateString("en-US", { timeZone: "UTC" })} (UTC)    Application reference: ${id}`,
     8,
   );
+  if (revisionNumber)
+    paragraph(`DRIVER-CERTIFIED AMENDMENT — REVISION ${revisionNumber}`, 9);
   if (submission.kind === "quick") {
     heading("Applicant information");
     const fields = quickFields.map((f) => ({
@@ -231,12 +286,36 @@ export async function createSubmissionPdf(
           row([{ label: "SSN (complete in person)", value: "_______ - ____ - _________" }]);
         }
         if (group.description) paragraph(group.description);
-        const records = submission.answers?.[group.key] || [];
+        const allRecords = submission.answers?.[group.key] || [];
+        const records =
+          group.key === "experience"
+            ? allRecords.filter((record) => record.selected === "Yes")
+            : allRecords;
         if (!records.length) {
-          row([{ label: group.title, value: "No records reported" }]);
+          row([
+            {
+              label: group.title,
+              value:
+                group.key === "experience"
+                  ? "No driving experience selected"
+                  : "No records reported",
+            },
+          ]);
           continue;
         }
         for (const [index, record] of records.entries()) {
+          if (group.key === "experience") {
+            const dates = `${record.from || "Not provided"} - ${record.to || "Not provided"}`;
+            row([
+              { label: "Equipment Type", value: record.equipment || "Other" },
+              { label: "From / To", value: dates },
+              { label: "Approximate Miles", value: record.miles || "Not provided" },
+              ...(record.equipment === "Other"
+                ? [{ label: "Other Equipment", value: record.other || "Not provided" }]
+                : []),
+            ]);
+            continue;
+          }
           if (group.repeat) {
             ensure(70);
             paragraph(`${group.item || "Record"} ${index + 1}`, 9);
@@ -263,6 +342,13 @@ export async function createSubmissionPdf(
             }
           }
           flush();
+        }
+        if (group.key === "personal") {
+          paragraph(
+            "In-person completion only. Do not enter or send a Social Security number online.",
+            8,
+          );
+          blankField("Social Security number - complete by hand in person", 50);
         }
       }
     heading("Applicant certification");
@@ -314,6 +400,21 @@ export async function createSubmissionPdf(
       "The signature above was provided with this web application. Separate MVR / PSP authorizations and policy signatures are not included in this application submission.",
       8,
     );
+    heading("COMPANY USE ONLY");
+    hiredCheckboxes();
+    row([
+      { label: "Date employed", value: "____________________________" },
+    ]);
+    row([
+      { label: "Department", value: "____________________________" },
+      { label: "Classification", value: "____________________________" },
+    ]);
+    blankField("Interviewing agent", 36);
+    blankField("Remarks / summary", 64);
+    row([
+      { label: "Date terminated", value: "____________________________" },
+      { label: "Supervisor", value: "____________________________" },
+    ]);
   }
   paragraph(`Submitted electronically at ${createdAt}.`, 8);
   doc.getPages().forEach((p, i) => {

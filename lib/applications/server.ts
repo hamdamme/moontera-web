@@ -11,6 +11,8 @@ import {
   type Store,
 } from "./workflow";
 import { createSubmissionPdf } from "./submission-pdf";
+import { createPrivate, readPrivate, updatePrivate } from "@/lib/onboarding/private-store";
+import { isAllowedApplicationOrigin } from "./origin";
 
 const store: Store = {
   async read(key) {
@@ -62,20 +64,34 @@ function reply(body: unknown, status = 200) {
     headers: { "Cache-Control": "no-store" },
   });
 }
+type IpRateLimit = { count: number; expiresAt: number };
+async function allowNetworkSubmission(ip: string, secret: string, now = Date.now()) {
+  const hour = Math.floor(now / (60 * 60 * 1000));
+  const ipHash = createHmac("sha256", secret).update(ip).digest("hex");
+  const key = `onboarding/application-rate-limits/${hour}/${ipHash}.json`;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const current = await readPrivate<IpRateLimit>(key);
+    if (current && current.value.expiresAt > now) {
+      if (current.value.count >= 30) return false;
+      const updated = await updatePrivate(key, {
+        count: current.value.count + 1,
+        expiresAt: current.value.expiresAt,
+      }, current.etag);
+      if (updated) return true;
+      continue;
+    }
+    const created = await createPrivate(key, { count: 1, expiresAt: (hour + 2) * 60 * 60 * 1000 });
+    if (created) return true;
+  }
+  throw new Error("Application rate limit state changed repeatedly");
+}
 export async function handleApplication(
   request: Request,
   kind: "quick" | "full",
+  verifiedEmail?: string,
 ) {
   try {
-    const origin = request.headers.get("origin");
-    if (
-      origin &&
-      ![
-        "https://www.moonterallc.com",
-        "https://moonterallc.com",
-        new URL(request.url).origin,
-      ].includes(origin)
-    )
+    if (!isAllowedApplicationOrigin(request.headers.get("origin"), request.url))
       return reply({ success: false, message: "Invalid request origin." }, 403);
     if (!request.headers.get("content-type")?.includes("application/json"))
       return reply(
@@ -113,6 +129,14 @@ export async function handleApplication(
     }
     const payload = validateSubmission(kind, input);
     if (
+      kind === "full" &&
+      (!verifiedEmail || payload.email !== verifiedEmail.trim().toLowerCase())
+    )
+      return reply(
+        { success: false, message: "Verify the invitation email before submitting." },
+        403,
+      );
+    if (
       !process.env.RESEND_API_KEY ||
       !process.env.BLOB_READ_WRITE_TOKEN ||
       !process.env.APPLICATION_KEY_SECRET
@@ -125,10 +149,20 @@ export async function handleApplication(
         },
         503,
       );
+    const ipAddress = request.headers.get("x-real-ip")?.trim().slice(0, 64);
+    if (ipAddress && !(await allowNetworkSubmission(ipAddress, process.env.APPLICATION_KEY_SECRET)))
+      return reply({ success: false, message: "Too many application attempts from this network. Please try again later or contact info@moonterallc.com." }, 429);
     const key = `applications/${kind}/${createHmac("sha256", process.env.APPLICATION_KEY_SECRET).update(payload.email).digest("hex")}.json`;
     const resend = new Resend(process.env.RESEND_API_KEY);
     const result = await processSubmission(key, payload, {
       store,
+      historyKey:
+        kind === "quick"
+          ? (currentKey, requestId) => {
+              const emailHash = path.basename(currentKey, ".json");
+              return `applications/quick/history/${emailHash}/${requestId}.json`;
+            }
+          : undefined,
       pdf: async (submission, id, date) => {
         const [font, template] = await Promise.all([
           readFile(path.join(process.cwd(), "public/fonts/Geist-Regular.ttf")),

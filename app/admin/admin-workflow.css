@@ -1,0 +1,6 @@
+.admin-next-step{display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-width:205px}
+.admin-next-step small{width:100%;color:#637187;font-size:11px}
+.admin-link-button{border:0;background:transparent;color:#9b2538;text-decoration:underline;font:inherit;font-size:11px;cursor:pointer;padding:2px}
+.admin-link-button:disabled{opacity:.5;cursor:wait}
+.admin-pdf-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px}
+.admin-pdf-links a{text-decoration:none;display:inline-flex;align-items:center;font-size:12px}

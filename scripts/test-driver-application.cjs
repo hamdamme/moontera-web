@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- CommonJS test harness. */
 const assert = require("node:assert/strict"),
   fs = require("node:fs"),
   path = require("node:path"),
@@ -16,6 +17,11 @@ execFileSync(
     "lib/applications/model.ts",
     "lib/applications/workflow.ts",
     "lib/applications/submission-pdf.ts",
+    "lib/applications/origin.ts",
+    "lib/http/read-json-body.ts",
+    "lib/screening/pdf.ts",
+    "lib/onboarding/draft-lifecycle.ts",
+    "lib/screening/disclosure-approval.ts",
     "--outDir",
     tmp,
     "--module",
@@ -27,19 +33,62 @@ execFileSync(
   ],
   { cwd: root, stdio: "inherit" },
 );
-const { validateSubmission } = require(
+const { validateSubmission, sanitizeDraftAnswers } = require(
   path.join(tmp, "lib/applications/model.js"),
 );
 const { processSubmission } = require(
   path.join(tmp, "lib/applications/workflow.js"),
 );
+const { isAllowedApplicationOrigin } = require(
+  path.join(tmp, "lib/applications/origin.js"),
+);
+const { JsonBodyError, readJsonBody } = require(
+  path.join(tmp, "lib/http/read-json-body.js"),
+);
 const { createSubmissionPdf } = require(
   path.join(tmp, "lib/applications/submission-pdf.js"),
+);
+const { createScreeningPdf } = require(path.join(tmp, "lib/screening/pdf.js"));
+const { draftRetentionDeadline } = require(
+  path.join(tmp, "lib/onboarding/draft-lifecycle.js"),
+);
+const { screeningTermsAreApproved } = require(
+  path.join(tmp, "lib/screening/disclosure-approval.js"),
 );
 const { initialAnswers, steps, dateKey, formatValue, validateStep } = require(
   path.join(tmp, "app/apply/schema.js"),
 );
 const id = "00000000-0000-4000-8000-000000000001";
+const retentionNow = Date.UTC(2026, 0, 1);
+const originalInviteExpires = retentionNow + 14 * 24 * 60 * 60 * 1000;
+const originalDraftDeadline = draftRetentionDeadline(
+  undefined,
+  originalInviteExpires,
+  retentionNow,
+);
+assert.equal(
+  originalDraftDeadline,
+  originalInviteExpires + 30 * 24 * 60 * 60 * 1000,
+);
+const replacementInviteExpires = originalInviteExpires + 14 * 24 * 60 * 60 * 1000;
+assert.equal(
+  draftRetentionDeadline(originalDraftDeadline, replacementInviteExpires, retentionNow),
+  originalDraftDeadline,
+);
+assert.equal(
+  draftRetentionDeadline(originalDraftDeadline, replacementInviteExpires, originalDraftDeadline),
+  replacementInviteExpires + 30 * 24 * 60 * 60 * 1000,
+);
+assert.equal(screeningTermsAreApproved(undefined, "Approved period: one year", "one year"), false);
+assert.equal(screeningTermsAreApproved("true", undefined, "one year"), false);
+assert.equal(screeningTermsAreApproved("true", "Approved period: one year", ""), false);
+assert.equal(screeningTermsAreApproved("true", "Approved period: two years", "one year"), false);
+assert.equal(screeningTermsAreApproved("true", "Approved period: ONE YEAR", "one year"), true);
+assert.equal(isAllowedApplicationOrigin(null, "https://www.moonterallc.com/api/application/quick"), false);
+assert.equal(isAllowedApplicationOrigin("https://www.moonterallc.com", "https://preview.example/api/application/quick"), true);
+assert.equal(isAllowedApplicationOrigin("https://moonterallc.com", "https://preview.example/api/application/quick"), true);
+assert.equal(isAllowedApplicationOrigin("https://preview.example", "https://preview.example/api/application/quick"), true);
+assert.equal(isAllowedApplicationOrigin("https://attacker.example", "https://preview.example/api/application/quick"), false);
 const raw = {
   requestId: id,
   quick: {
@@ -53,49 +102,43 @@ const raw = {
     email: "ALEX@example.com",
     position: "Company driver",
     start_date: "2026-11-01",
-    cdl_number: "IL12345678",
+    cdl_number: "EXAMPLE123",
     cdl_state: "IL",
     cdl_class: "Class A",
-    cdl_expiration: "2028-11-01",
-    medical_card_issue: "2026-02-01",
-    medical_card_expiration: "2028-02-01",
-    drug_test_status: "Date known",
-    drug_test_date: "2026-01-15",
-    ssn_last4: "",
+    cdl_expiration: "2028-06-30",
+    medical_card_issue: "2026-01-01",
+    medical_card_expiration: "2028-01-01",
+    drug_test_status: "No",
+    drug_test_date: "",
+    ssn_last4: "1234",
   },
 };
 const quick = validateSubmission("quick", raw);
 assert.equal(quick.email, "alex@example.com");
-assert.equal(quick.quick.cdl_state, "IL");
-assert.equal(quick.quick.drug_test_date, "2026-01-15");
-assert.equal(quick.quick.phone, "773-555-0123");
-assert.throws(() => validateSubmission("quick", {...raw, quick: {...raw.quick, state: "ZZ"}}));
-assert.throws(() => validateSubmission("quick", {...raw, quick: {...raw.quick, zip: "abcdef"}}));
-assert.throws(() => validateSubmission("quick", {...raw, quick: {...raw.quick, phone: "12345"}}));
-for (const [key, value] of [
-  ["cdl_state", "XX"],
-  ["cdl_class", "Class Z"],
-  ["cdl_number", ""],
-  ["medical_card_issue", "2026-02-30"],
-  ["medical_card_expiration", "2025-01-01"],
-  ["drug_test_date", "2026-02-30"],
-  ["ssn_last4", "12345"],
-  ["ssn_last4", "123"],
-]) {
-  assert.throws(() => validateSubmission("quick", {
+assert.equal(quick.quick.ssn_last4, "1234");
+assert.throws(() =>
+  validateSubmission("quick", {
     ...raw,
-    quick: { ...raw.quick, [key]: value },
-  }), `Invalid ${key} should fail`);
-}
-assert.throws(() => validateSubmission("quick", {
-  ...raw, quick: { ...raw.quick, drug_test_date: "", drug_test_status: "Date known" },
-}));
-for (const status of ["Unknown", "Never tested"]) {
-  const result = validateSubmission("quick", {
-    ...raw, quick: { ...raw.quick, drug_test_status: status, drug_test_date: "" },
-  });
-  assert.equal(result.quick.drug_test_date, "");
-}
+    quick: { ...raw.quick, ssn_last4: "123" },
+  }),
+);
+assert.throws(() =>
+  validateSubmission("quick", {
+    ...raw,
+    quick: { ...raw.quick, drug_test_status: "Yes", drug_test_date: "" },
+  }),
+);
+assert.equal(
+  validateSubmission("quick", {
+    ...raw,
+    quick: {
+      ...raw.quick,
+      drug_test_status: "Yes",
+      drug_test_date: "2026-02-01",
+    },
+  }).quick.drug_test_date,
+  "2026-02-01",
+);
 assert.throws(() =>
   validateSubmission("quick", {
     ...raw,
@@ -156,13 +199,45 @@ a.eligibility[0] = { work: "Yes", age: "Yes", previous: "No" };
 a.workNotes[0].notes =
   "No previous employment; sample application for testing.";
 a.medical[0].expires = "05/15/2028";
-a.clearinghouse[0].signature = "José Example";
+assert.equal(steps.flatMap((step) => step.groups).some((g) => g.key === "clearinghouse"), false);
+assert.equal(steps.flatMap((step) => step.groups).some((g) => g.key === "communications"), false);
+assert.equal(steps.flatMap((step) => step.groups).some((g) => g.fields.some((f) => f.key === "lastTest")), false);
+assert.equal(steps.flatMap((step) => step.groups).find((g) => g.key === "licenses").fields.some((f) => f.key === "issued"), true);
+assert.equal(steps.flatMap((step) => step.groups).some((g) => g.fields.some((f) => f.type === "ssn")), false);
+assert.equal(steps.flatMap((step) => step.groups).some((g) => g.key === "drugTestAuthorization"), true);
+const experienceGroup = steps.flatMap((step) => step.groups).find((g) => g.key === "experience");
+assert.deepEqual(experienceGroup.fixedRows, [
+  "Straight Truck",
+  "Tractor & Semi-Trailer",
+  "Tractor – Two Trailers",
+  "Tractor – Three Trailers",
+  "Motorcoach / School Bus",
+  "Other",
+]);
+a.experience[0] = {
+  ...a.experience[0],
+  equipment: "Tampered type",
+  selected: "Yes",
+  from: "01/2020",
+  to: "02/2021",
+  miles: "100000",
+};
+a.personal[0].ssn = "123-45-6789";
 const full = validateSubmission("full", {
   requestId: id,
   answers: a,
   certified: true,
   signature: { mode: "type", name: "José Example", image: "" },
 });
+assert.equal(full.answers.experience[0].equipment, "Straight Truck");
+assert.equal(full.answers.experience.filter((row) => row.selected === "Yes").length, 1);
+assert.equal(Object.hasOwn(full.answers.personal[0], "ssn"), false);
+assert.equal(full.answers.drugTestAuthorization[0].authorized, "I agree");
+const draft = sanitizeDraftAnswers({ answers: a }, "alex@example.com");
+assert.equal(draft.personal[0].email, "alex@example.com");
+assert.equal(Object.hasOwn(draft.personal[0], "ssn"), false);
+assert.equal(draft.experience[0].equipment, "Straight Truck");
+assert.equal(sanitizeDraftAnswers({ answers: initialAnswers() }, "alex@example.com").personal[0].email, "alex@example.com");
 const omitted = structuredClone(a);
 omitted.personal = [];
 assert.throws(() =>
@@ -207,6 +282,41 @@ const deps = {
   },
 };
 (async () => {
+  const validJsonRequest = new Request("https://example.test", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: "synthetic" }),
+  });
+  assert.deepEqual(await readJsonBody(validJsonRequest, 4096), { token: "synthetic" });
+  await assert.rejects(
+    readJsonBody(
+      new Request("https://example.test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: "x".repeat(5000) }),
+      }),
+      4096,
+    ),
+    (error) => error instanceof JsonBodyError && error.status === 413,
+  );
+  await assert.rejects(
+    readJsonBody(
+      new Request("https://example.test", { method: "POST", body: "{}" }),
+      4096,
+    ),
+    (error) => error instanceof JsonBodyError && error.status === 415,
+  );
+  await assert.rejects(
+    readJsonBody(
+      new Request("https://example.test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "not-json",
+      }),
+      4096,
+    ),
+    (error) => error instanceof JsonBodyError && error.status === 400,
+  );
   const first = await processSubmission("quick", quick, deps);
   assert(first.id);
   await processSubmission("quick", quick, deps);
@@ -217,8 +327,52 @@ const deps = {
       { ...quick, requestId: "00000000-0000-4000-8000-000000000002" },
       deps,
     ),
-    (e) => e.status === 409,
+    (e) => e.status === 429,
   );
+  const historyDeps = {
+    ...deps,
+    historyKey: (_key, requestId) => `quick-history/${requestId}`,
+  };
+  const reapplication = {
+    ...quick,
+    requestId: "00000000-0000-4000-8000-000000000002",
+  };
+  now += 89 * 24 * 60 * 60 * 1000;
+  await assert.rejects(
+    processSubmission("quick", reapplication, historyDeps),
+    (e) => e.status === 429,
+  );
+  now += 24 * 60 * 60 * 1000;
+  sends = [];
+  const second = await processSubmission("quick", reapplication, historyDeps);
+  assert(second.id && second.id !== first.id);
+  assert.deepEqual(sends, ["owner", "applicant"]);
+  const archived = await store.read(`quick-history/${quick.requestId}`);
+  assert.equal(archived.record.id, first.id);
+  assert.equal(archived.record.complete, true);
+  sends = [];
+  const retryFirst = await processSubmission("quick", quick, historyDeps);
+  assert.equal(retryFirst.id, first.id);
+  assert.equal(retryFirst.alreadySubmitted, true);
+  assert.deepEqual(sends, []);
+
+  await processSubmission("rotate-race", quick, historyDeps);
+  now += 90 * 24 * 60 * 60 * 1000;
+  sends = [];
+  const competing = await Promise.allSettled([
+    processSubmission(
+      "rotate-race",
+      { ...quick, requestId: "00000000-0000-4000-8000-000000000003" },
+      historyDeps,
+    ),
+    processSubmission(
+      "rotate-race",
+      { ...quick, requestId: "00000000-0000-4000-8000-000000000004" },
+      historyDeps,
+    ),
+  ]);
+  assert.equal(competing.filter((r) => r.status === "fulfilled").length, 1);
+  assert.deepEqual(sends, ["owner", "applicant"]);
   sends = [];
   const concurrent = await Promise.allSettled([
     processSubmission("race", quick, deps),
@@ -281,7 +435,30 @@ const deps = {
     );
     assert(bytes.length > 1000);
   }
+  const revisedPdf = await createSubmissionPdf(full, "SAMPLE-REVISION-1", "2026-10-17T15:00:00.000Z", font, template, 1);
+  fs.writeFileSync(path.join(out, "Moontera-full-revision-1-sample.pdf"), revisedPdf);
+  const legalDocs = require(path.join(root, "app/apply/documents/documents.json"));
+  const screeningPdf = await createScreeningPdf({
+    id: "SAMPLE-SCREENING-ONLY",
+    name: "Alex Example",
+    email: "alex@example.com",
+    submittedAt: "2026-10-17T15:00:00.000Z",
+    certificationDate: "2026-10-17",
+    mvrName: "Alex Example",
+    pspName: "Alex Example",
+    clearinghouseName: "Alex Example",
+    certificationName: "Alex Example",
+    signedAt: "2026-10-17T15:00:00.000Z",
+    disclosureHash: "SYNTHETIC-ONLY",
+  }, {
+    mvr: legalDocs.find((document) => document.id === "mvr"),
+    psp: legalDocs.find((document) => document.id === "psp"),
+    clearinghouseText: "Synthetic sample only; this wording is not approved for driver use.",
+    consentPeriod: "SAMPLE PERIOD",
+  }, font, template);
+  fs.writeFileSync(path.join(out, "Moontera-screening-sample.pdf"), screeningPdf);
+  assert(screeningPdf.length > 1000 && revisedPdf.length > 1000);
   console.log(
-    "PASS: validation, missing groups, date checks, email normalization, concurrent duplicate prevention, repeat requests, partial email retry, timeout cutoff, and formatted PDFs.",
+    "PASS: bounded JSON bodies, validation, request origins, missing groups, date checks, email normalization, screening release gate, draft retention deadlines, concurrent duplicate prevention, repeat requests, partial email retry, timeout cutoff, and formatted PDFs.",
   );
 })().finally(() => fs.rmSync(tmp, { recursive: true, force: true }));

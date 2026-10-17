@@ -4,15 +4,26 @@ import {
   visible,
   validateStep,
   dateKey,
-  states,
   type Answers,
+  states,
 } from "../../app/apply/schema";
-export const quickFields = [
-  { key: "full_name", label: "Full name", type: "text", required: true },
+export type QuickField = {
+  key: string;
+  label: string;
+  type: "text" | "email" | "tel" | "date" | "select";
+  required?: boolean;
+  maxLength?: number;
+  options?: string[];
+  pattern?: string;
+  inputMode?: "numeric";
+  when?: [string, string];
+};
+export const quickFields: QuickField[] = [
+  { key: "full_name", label: "Full legal name", type: "text", required: true },
   { key: "address", label: "Street address", type: "text", required: true },
   { key: "city", label: "City", type: "text", required: true },
-  { key: "state", label: "State", type: "select", required: true },
-  { key: "zip", label: "ZIP code", type: "text", required: true },
+  { key: "state", label: "State", type: "select", required: true, options: states },
+  { key: "zip", label: "ZIP code", type: "text", required: true, maxLength: 10 },
   { key: "dob", label: "Date of birth", type: "date", required: true },
   { key: "phone", label: "Phone number", type: "tel", required: true },
   { key: "email", label: "Email address", type: "email", required: true },
@@ -21,25 +32,38 @@ export const quickFields = [
     label: "Position applied for",
     type: "select",
     required: true,
+    options: ["Company driver", "Owner operator", "Lease driver", "Other"],
   },
-  {
-    key: "start_date",
-    label: "Available start date",
-    type: "date",
-    required: true,
-  },
+  { key: "start_date", label: "Available start date", type: "date", required: true },
   { key: "cdl_number", label: "CDL number", type: "text", required: true },
-  { key: "cdl_state", label: "CDL issuing state", type: "select", required: true },
-  { key: "cdl_class", label: "CDL class", type: "select", required: true },
+  { key: "cdl_state", label: "CDL issuing state", type: "select", required: true, options: states },
+  { key: "cdl_class", label: "CDL class", type: "select", required: true, options: ["Class A", "Class B", "Class C", "Other"] },
   { key: "cdl_expiration", label: "CDL expiration date", type: "date", required: true },
   { key: "medical_card_issue", label: "DOT medical card issue date", type: "date", required: true },
   { key: "medical_card_expiration", label: "DOT medical card expiration date", type: "date", required: true },
-  { key: "drug_test_status", label: "Last DOT drug test", type: "select", required: true },
-  { key: "drug_test_date", label: "Date of last DOT drug test", type: "date", required: false },
-  { key: "ssn_last4", label: "Last four SSN digits", type: "text", required: false },
-] as const;
-export const cdlClasses = ["Class A", "Class B", "Class C"] as const;
-export const drugTestStatuses = ["Date known", "Unknown", "Never tested"] as const;
+  {
+    key: "drug_test_status",
+    label: "Have you previously completed a DOT drug and alcohol test?",
+    type: "select",
+    required: true,
+    options: ["Yes", "No"],
+  },
+  {
+    key: "drug_test_date",
+    label: "Date of your most recent DOT drug and alcohol test",
+    type: "date",
+    required: true,
+    when: ["drug_test_status", "Yes"],
+  },
+  {
+    key: "ssn_last4",
+    label: "Last four digits of SSN (optional)",
+    type: "text",
+    maxLength: 4,
+    pattern: "[0-9]{4}",
+    inputMode: "numeric",
+  },
+];
 export const positions = [
   "Company driver",
   "Owner operator",
@@ -80,12 +104,87 @@ function text(x: unknown, max = 300, required = false): string {
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
+
+export function sanitizeDraftAnswers(input: unknown, verifiedEmail: string): Answers {
+  const body = object(input);
+  const rawAnswers = object(body.answers);
+  const email = normalizeEmail(verifiedEmail);
+  if (email.length > 254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email))
+    throw new InputError("Verified invitation email is invalid.");
+  const answers = initialAnswers();
+  for (const group of steps.flatMap((step) => step.groups)) {
+    const provided = rawAnswers[group.key];
+    let rows: unknown[];
+    if (group.fixedRows) {
+      if (!Array.isArray(provided) || provided.length !== group.fixedRows.length)
+        throw new InputError(`Invalid ${group.title.toLowerCase()} rows.`);
+      rows = provided;
+    } else if (group.repeat) {
+      if (provided === undefined) rows = answers[group.key];
+      else if (!Array.isArray(provided) || provided.length > 30 || provided.length < (group.minimum || 0))
+        throw new InputError(`Invalid ${group.title.toLowerCase()} rows.`);
+      else rows = provided;
+    } else {
+      if (provided === undefined) rows = [{}];
+      else if (!Array.isArray(provided) || provided.length !== 1)
+        throw new InputError(`Invalid ${group.title.toLowerCase()} fields.`);
+      else rows = provided;
+    }
+    answers[group.key] = rows.map((value, index) => {
+      const row = object(value);
+      const cleaned: Record<string, string> = group.fixedRows
+        ? { equipment: group.fixedRows[index] }
+        : {};
+      for (const field of group.fields) {
+        cleaned[field.key] = text(
+          row[field.key],
+          field.type === "textarea" ? 4000 : field.key === "email" ? 254 : 300,
+        );
+        if (field.options && cleaned[field.key] && !field.options.includes(cleaned[field.key]))
+          throw new InputError("Choose a valid option.");
+      }
+      for (const field of group.fields)
+        if (!visible(field, cleaned)) delete cleaned[field.key];
+      return cleaned;
+    });
+  }
+  const draftEmail = answers.personal[0]?.email;
+  if (draftEmail && normalizeEmail(draftEmail) !== email)
+    throw new InputError("The verified invitation email cannot be changed in this application.");
+  answers.personal[0].email = email;
+  for (let stepIndex = 0; stepIndex < steps.length; stepIndex++) {
+    for (const group of steps[stepIndex].groups) {
+      for (const [index, row] of answers[group.key].entries()) {
+        for (const field of group.fields) {
+          if (!visible(field, row)) continue;
+          const value = row[field.key]?.trim() || "";
+          if (!value) continue;
+          if (field.type === "email" && !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(value))
+            throw new InputError("Enter a valid email address.");
+          if (field.type === "phone" && !/^\d{3}-\d{3}-\d{4}$/.test(value))
+            throw new InputError("Enter a 10-digit phone number.");
+          if (field.type === "number" && !/^\d{1,9}$/.test(value))
+            throw new InputError("Enter a whole number using digits only.");
+          if (field.type === "date" || field.type === "month") {
+            const date = dateKey(value, field.type === "month");
+            if (!date) throw new InputError(`Enter a valid ${field.type === "month" ? "month" : "date"}.`);
+            if (field.past && date > new Date().toISOString().slice(0, 10))
+              throw new InputError("This date cannot be in the future.");
+          }
+        }
+        if (index > 30) throw new InputError("Too many records.");
+      }
+    }
+  }
+  return answers;
+}
+
 export function validateSubmission(
   kind: "quick" | "full",
   input: unknown,
 ): Submission {
   const body = object(input),
-    requestId = text(body.requestId, 36, true);
+    requestId = text(body.requestId, 36, true).toLowerCase();
   if (
     !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(
       requestId,
@@ -96,52 +195,43 @@ export function validateSubmission(
   if (kind === "quick") {
     const raw = object(body.quick),
       quick: Record<string, string> = {};
-    for (const field of quickFields)
+    for (const field of quickFields) {
+      const required =
+        field.required &&
+        (!field.when || raw[field.when[0]] === field.when[1]);
       quick[field.key] = text(
         raw[field.key],
-        field.key === "email" ? 254 : field.key === "cdl_number" ? 40 : field.key === "ssn_last4" ? 4 : 300,
-        field.required || (field.key === "drug_test_date" && raw.drug_test_status === "Date known"),
+        field.maxLength || (field.key === "email" ? 254 : 300),
+        !!required,
       );
+      if (field.when && raw[field.when[0]] !== field.when[1])
+        quick[field.key] = "";
+      if (field.options && quick[field.key] && !field.options.includes(quick[field.key]))
+        throw new InputError("Choose a valid option.");
+    }
     if (!positions.includes(quick.position))
       throw new InputError("Choose a valid position.");
-    if (!states.includes(quick.state))
-      throw new InputError("Choose a valid address state.");
-    if (!/^\d{5}(-\d{4})?$/.test(quick.zip))
-      throw new InputError("Enter a five-digit ZIP code, or ZIP+4.");
-    if (!/^[a-zA-Z0-9 -]{3,40}$/.test(quick.cdl_number))
-      throw new InputError("Enter a valid CDL number using letters, digits, spaces, or hyphens.");
-    if (!states.includes(quick.cdl_state))
-      throw new InputError("Choose the CDL issuing state.");
-    if (!cdlClasses.some((value) => value === quick.cdl_class))
-      throw new InputError("Choose the CDL class.");
-    if (!drugTestStatuses.some((value) => value === quick.drug_test_status))
-      throw new InputError("Choose the last DOT drug test status.");
-    if (quick.ssn_last4 && !/^\d{4}$/.test(quick.ssn_last4))
-      throw new InputError("Enter exactly four SSN digits, or leave it blank.");
-    if (quick.drug_test_status !== "Date known" && quick.drug_test_date)
-      throw new InputError("Provide a drug test date only when the date is known.");
-    for (const key of ["dob", "start_date", "cdl_expiration", "medical_card_issue", "medical_card_expiration", "drug_test_date"]) {
+    for (const key of [
+      "dob",
+      "start_date",
+      "cdl_expiration",
+      "medical_card_issue",
+      "medical_card_expiration",
+      ...(quick.drug_test_status === "Yes" ? ["drug_test_date"] : []),
+    ]) {
       const v = quick[key];
-      if (!v && key === "drug_test_date") continue;
       if (
         !/^\d{4}-\d{2}-\d{2}$/.test(v) ||
         !dateKey(`${v.slice(5, 7)}/${v.slice(8)}/${v.slice(0, 4)}`)
       )
         throw new InputError("Enter valid dates.");
     }
-    const today = new Date().toISOString().slice(0, 10);
-    if (quick.dob > today)
+    if (quick.dob > new Date().toISOString().slice(0, 10))
       throw new InputError("Date of birth cannot be in the future.");
-    if (quick.medical_card_issue > today)
-      throw new InputError("Medical card issue date cannot be in the future.");
-    if (quick.medical_card_expiration < quick.medical_card_issue)
-      throw new InputError("Medical card expiration must follow its issue date.");
-    if (quick.drug_test_date && quick.drug_test_date > today)
-      throw new InputError("Last drug test date cannot be in the future.");
-    const phoneDigits = quick.phone.replace(/\D/g, "");
-    if (!(phoneDigits.length === 10 || (phoneDigits.length === 11 && phoneDigits.startsWith("1"))))
-      throw new InputError("Enter a ten-digit US phone number.");
-    quick.phone = [phoneDigits.slice(-10, -7), phoneDigits.slice(-7, -4), phoneDigits.slice(-4)].join("-");
+    if (!/^\+?1?\d{10}$/.test(quick.phone.replace(/[\s().-]/g, "")))
+      throw new InputError("Enter a valid phone number.");
+    if (quick.ssn_last4 && !/^\d{4}$/.test(quick.ssn_last4))
+      throw new InputError("Enter exactly four digits for the optional SSN field.");
     result = {
       kind,
       requestId,
@@ -158,13 +248,17 @@ export function validateSubmission(
       const rows = raw[group.key];
       if (
         !Array.isArray(rows) ||
-        rows.length > (group.repeat ? 30 : 1) ||
-        rows.length < (group.repeat ? group.minimum || 0 : 1)
+        (group.fixedRows
+          ? rows.length !== group.fixedRows.length
+          : rows.length > (group.repeat ? 30 : 1) ||
+            rows.length < (group.repeat ? group.minimum || 0 : 1))
       )
         throw new InputError(`Complete ${group.title.toLowerCase()}.`);
-      answers[group.key] = rows.map((value) => {
+      answers[group.key] = rows.map((value, index) => {
         const row = object(value),
-          cleaned: Record<string, string> = {};
+          cleaned: Record<string, string> = group.fixedRows
+            ? { equipment: group.fixedRows[index] }
+            : {};
         for (const field of group.fields)
           cleaned[field.key] = text(
             row[field.key],

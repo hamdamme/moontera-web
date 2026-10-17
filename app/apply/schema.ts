@@ -1,4 +1,3 @@
-import { formatPhone, formatZip, formatSsn, normalizeCdl } from "../../lib/applications/smart-fields";
 export type Field = {
   key: string;
   label: string;
@@ -6,18 +5,19 @@ export type Field = {
     | "text"
     | "email"
     | "phone"
-    | "ssn"
     | "date"
     | "month"
     | "number"
     | "select"
     | "yesno"
+    | "checkbox"
     | "textarea";
   required?: boolean;
   options?: string[];
   hint?: string;
   when?: [string, string];
   past?: boolean;
+  readOnly?: boolean;
 };
 export type Group = {
   key: string;
@@ -27,6 +27,7 @@ export type Group = {
   repeat?: boolean;
   minimum?: number;
   item?: string;
+  fixedRows?: string[];
 };
 export type Step = {
   title: string;
@@ -80,7 +81,7 @@ export const steps: Step[] = [
           }),
           f("dob", "Date of birth", "date", true, { past: true }),
           f("phone", "Phone number", "phone", true),
-          f("email", "Email address", "email", true),
+          f("email", "Email address", "email", true, { readOnly: true }),
           f("startDate", "Available start date", "date", true),
           f("referral", "Who referred you?"),
         ],
@@ -252,7 +253,7 @@ export const steps: Step[] = [
           f("class", "License class", "select", true, {
             options: ["Class A", "Class B", "Class C", "Other"],
           }),
-          f("issued", "License issue date", "date", true, { past: true }),
+          f("issued", "Issue date", "date", true, { past: true }),
           f("expires", "Expiration date", "date", true),
           f("endorsements", "Endorsements"),
         ],
@@ -344,26 +345,31 @@ export const steps: Step[] = [
       {
         key: "experience",
         title: "Driving experience",
-        repeat: true,
-        minimum: 0,
-        item: "equipment record",
+        fixedRows: [
+          "Straight Truck",
+          "Tractor & Semi-Trailer",
+          "Tractor – Two Trailers",
+          "Tractor – Three Trailers",
+          "Motorcoach / School Bus",
+          "Other",
+        ],
+        item: "equipment experience",
         fields: [
-          f("equipment", "Equipment type", "select", true, {
-            options: [
-              "Straight truck",
-              "Tractor & semi-trailer",
-              "Tractor - two trailers",
-              "Tractor - three trailers",
-              "Motorcoach / school bus",
-              "Other",
-            ],
+          f("selected", "Check if applicable", "checkbox"),
+          f("from", "From", "month", true, {
+            past: true,
+            when: ["selected", "Yes"],
           }),
-          f("other", "Specify equipment", "text", true, {
-            when: ["equipment", "Other"],
+          f("to", "To", "month", true, {
+            past: true,
+            when: ["selected", "Yes"],
           }),
-          f("from", "From", "month", true, { past: true }),
-          f("to", "To", "month", true, { past: true }),
-          f("miles", "Approximate miles", "number", true),
+          f("miles", "Approximate miles", "number", true, {
+            when: ["selected", "Yes"],
+          }),
+          f("other", "Describe other equipment", "text", true, {
+            when: ["selected", "Yes"],
+          }),
         ],
       },
       {
@@ -443,18 +449,22 @@ export const steps: Step[] = [
         ],
       },
       {
-        key: "drugAuthorization",
-        title: "Authorization to obtain past drug & alcohol test results",
+        key: "drugTestAuthorization",
+        title: "Authorization to Obtain Past Drug & Alcohol Test Results",
         description:
-          "I authorize Moontera LLC to obtain DOT-required drug and alcohol testing records from previous employers, including positive test results, refusals, and return-to-duty documentation, where permitted by federal regulations. I authorize Moontera LLC to contact companies for which I worked or applied as a driver during the past two (2) years, subject to applicable federal requirements. This authorization does not replace official FMCSA Clearinghouse consent.",
+          "I authorize Moontera LLC to obtain all DOT-required drug and alcohol testing records from previous employers, including positive test results, refusals, and return-to-duty documentation as permitted by federal regulations.\n\nI authorize Moontera LLC to obtain all DOT-required drug and alcohol testing records from all companies for which I worked or applied as a driver during the past two (2) years.",
         fields: [
-          f("acknowledgment", "I authorize the permitted prior drug and alcohol record requests described above", "select", true, {options:["I authorize"]}),
-          f("signature", "Typed full legal name / authorization signature", "text", true)
-        ]
+          f("authorized", "I have read and agree to this authorization", "select", true, {
+            options: ["I agree"],
+          }),
+          f("typedName", "Typed full legal name", "text", true),
+        ],
       },
       {
         key: "testEmployers",
-        title: "Previous employers / applications for drug and alcohol records (past two years)",
+        title: "Related employers / applications (past two years)",
+        description:
+          "List each company where you worked or applied as a driver during the past two years, under the authorization immediately above.",
         repeat: true,
         minimum: 0,
         item: "company",
@@ -472,11 +482,14 @@ export const initialAnswers = (): Answers =>
       .flatMap((s) => s.groups)
       .map((g) => [
         g.key,
-        Array.from({ length: g.repeat ? g.minimum || 0 : 1 }, () => ({})),
+        g.fixedRows
+          ? g.fixedRows.map((equipment) => ({ equipment }))
+          : Array.from({ length: g.repeat ? g.minimum || 0 : 1 }, () => ({})),
       ]),
   );
 export const visible = (f: Field, row: Record<string, string>) =>
-  !f.when || row[f.when[0]] === f.when[1];
+  (!f.when || row[f.when[0]] === f.when[1]) &&
+  !(f.key === "other" && row.equipment && row.equipment !== "Other");
 export const path = (g: string, i: number, k: string) => `${g}.${i}.${k}`;
 export function formatValue(f: Field, v: string) {
   if (f.type === "date" || f.type === "month") {
@@ -489,11 +502,15 @@ export function formatValue(f: Field, v: string) {
       .filter(Boolean)
       .join("/");
   }
-  if (f.type === "ssn") return formatSsn(v);
-  if (f.type === "phone") return formatPhone(v);
+  if (f.type === "phone") {
+    const d = v.replace(/\D/g, "").slice(0, 10);
+    return [d.slice(0, 3), d.slice(3, 6), d.slice(6)].filter(Boolean).join("-");
+  }
   if (f.type === "number") return v.replace(/\D/g, "").slice(0, 9);
-  if (f.key === "zip") return formatZip(v);
-  if (f.key === "number" && f.label.toLowerCase().includes("license")) return normalizeCdl(v);
+  if (f.key === "zip") {
+    const d = v.replace(/\D/g, "").slice(0, 9);
+    return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
+  }
   return v;
 }
 export function dateKey(value: string, month = false): string | null {
@@ -533,8 +550,6 @@ export function validateStep(step: number, a: Answers) {
             e = "Enter a valid email address.";
           if (f.type === "phone" && !/^\d{3}-\d{3}-\d{4}$/.test(v))
             e = "Enter a 10-digit phone number.";
-          if (f.type === "ssn" && !/^\d{3}-\d{2}-\d{4}$/.test(v))
-            e = "Enter nine digits, formatted XXX-XX-XXXX.";
           if (f.key === "zip" && !/^\d{5}(-\d{4})?$/.test(v))
             e = "Enter a 5- or 9-digit ZIP code.";
           if (f.options && !f.options.includes(v))

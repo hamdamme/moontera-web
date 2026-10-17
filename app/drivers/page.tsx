@@ -39,20 +39,14 @@ export default function DriversPage() {
             consistency, and dependable freight operations.
           </p>
 
-          <div className="mt-10 grid w-full max-w-[824px] grid-cols-1 gap-6 sm:grid-cols-2">
-            <Link
-              href="/apply"
-              className="inline-flex min-h-20 w-full items-center justify-center rounded-2xl bg-blue-600 px-6 py-5 text-center text-lg font-bold text-white shadow-lg shadow-blue-950/30 transition-colors hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400"
-            >
-              Full Driver Application
-            </Link>
-
+          <div className="mt-10 flex flex-col gap-4 sm:flex-row">
             <Link
               href="/application/details"
-              className="inline-flex min-h-20 w-full items-center justify-center rounded-2xl border-2 border-white bg-transparent px-6 py-5 text-center text-lg font-bold text-white transition-colors hover:bg-white hover:text-slate-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+              className="rounded-full bg-blue-600 px-8 py-4 text-center text-sm font-bold text-white hover:bg-blue-700"
             >
-              Quick Application
+              Start Quick Application
             </Link>
+            <span className="rounded-full border border-white/30 px-8 py-4 text-center text-sm font-semibold text-slate-200">Full Application by invitation after review</span>
           </div>
         </div>
       </section>
@@ -141,17 +135,10 @@ export default function DriversPage() {
                 Complete your driver application
               </h3>
               <p className="mt-4 leading-7 text-slate-300">
-                Complete your personal details, work history, and driving
-                record, then review authorizations and company policies. Receive
-                an email confirmation after submitting.
+                Complete the Full Driver Application using the secure link our
+                team sends after reviewing your Quick Application.
               </p>
-
-              <Link
-                href="/apply"
-                className="mt-8 inline-flex rounded-full bg-blue-600 px-8 py-4 text-sm font-bold text-white hover:bg-blue-700"
-              >
-                Full Driver Application
-              </Link>
+              <p className="mt-8 text-sm font-semibold text-blue-300">Invitation required</p>
             </div>
 
             <div className="rounded-[2rem] border border-white/10 bg-white/10 p-8">
@@ -162,9 +149,9 @@ export default function DriversPage() {
                 Start with your contact details
               </h3>
               <p className="mt-4 leading-7 text-slate-300">
-                Provide your name, contact information, preferred position, and
-                availability. Complete qualification details in the Full Driver
-                Application.
+                Provide your contact, CDL, medical-card, and limited screening
+                intake details. Our team reviews every application before
+                sending the next secure invitation.
               </p>
 
               <Link

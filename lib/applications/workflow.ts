@@ -11,6 +11,7 @@ export type RecordData = {
   leaseUntil: number;
   attemptStartedAt?: number;
   complete: boolean;
+  completedAt?: string;
 };
 export type Versioned = { record: RecordData; version: string };
 export interface Store {
@@ -29,6 +30,7 @@ export interface WorkflowDeps {
     record: RecordData,
     recipient: "owner" | "applicant",
   ) => Promise<string>;
+  historyKey?: (currentKey: string, requestId: string) => string;
   now?: () => number;
 }
 export class SubmissionError extends Error {
@@ -45,6 +47,20 @@ export async function processSubmission(
   deps: WorkflowDeps,
 ) {
   const now = deps.now || Date.now;
+  const historyKey = deps.historyKey?.(key, payload.requestId);
+  if (historyKey && historyKey !== key) {
+    const historical = await deps.store.read(historyKey);
+    if (historical) {
+      if (historical.record.payload.requestId !== payload.requestId)
+        throw new SubmissionError(409, "Please contact Moontera for help.");
+      if (historical.record.complete)
+        return { id: historical.record.id, alreadySubmitted: true };
+      return processSubmission(historyKey, payload, {
+        ...deps,
+        historyKey: undefined,
+      });
+    }
+  }
   const digest = createHash("sha256")
     .update(JSON.stringify(payload))
     .digest("hex");
@@ -68,11 +84,78 @@ export async function processSubmission(
   }
   if (!stored) throw new SubmissionError(503, "Please try again in a moment.");
   let { record, version } = stored;
-  if (record.payload.requestId !== payload.requestId)
-    throw new SubmissionError(
-      409,
-      "An application of this type has already been received for this email. Contact info@moonterallc.com if you need to update it.",
+  if (record.payload.requestId !== payload.requestId) {
+    const completedAt = Date.parse(record.completedAt || record.createdAt);
+    const cooldownMs = 90 * 24 * 60 * 60 * 1000;
+    if (
+      payload.kind !== "quick" ||
+      !record.complete ||
+      record.leaseUntil > now() ||
+      !Number.isFinite(completedAt) ||
+      now() - completedAt < cooldownMs
+    )
+      throw new SubmissionError(
+        payload.kind === "quick" ? 429 : 409,
+        payload.kind === "quick"
+          ? "A new Quick Application cannot be accepted right now. Contact info@moonterallc.com if you need help."
+          : "An application of this type has already been received for this email. Contact info@moonterallc.com if you need to update it.",
+      );
+
+    const previous = record;
+    const id = randomUUID();
+    const createdAt = new Date(now()).toISOString();
+    const pdf = Buffer.from(await deps.pdf(payload, id, createdAt)).toString(
+      "base64",
     );
+    const lease = await deps.store.save(
+      key,
+      { ...previous, leaseUntil: now() + 120000 },
+      version,
+    );
+    if (!lease)
+      throw new SubmissionError(
+        409,
+        "Your application is being processed. Please wait, then retry.",
+      );
+
+    const archiveKey = deps.historyKey?.(key, previous.payload.requestId);
+    if (archiveKey && archiveKey !== key) {
+      const archived = await deps.store.create(archiveKey, {
+        ...previous,
+        leaseUntil: 0,
+      });
+      if (!archived) {
+        const existing = await deps.store.read(archiveKey);
+        if (existing?.record.id !== previous.id)
+          throw new SubmissionError(
+            503,
+            "We could not preserve the previous application. Please retry shortly.",
+          );
+      }
+    }
+
+    const replaced = await deps.store.save(
+      key,
+      {
+        id,
+        payload,
+        digest,
+        createdAt,
+        pdf,
+        leaseUntil: 0,
+        complete: false,
+      },
+      lease.version,
+    );
+    if (!replaced)
+      throw new SubmissionError(
+        409,
+        "Your application is being processed. Please wait, then retry.",
+      );
+    stored = replaced;
+    record = replaced.record;
+    version = replaced.version;
+  }
   if (record.complete) return { id: record.id, alreadySubmitted: true };
   if (record.digest !== digest)
     throw new SubmissionError(
@@ -122,7 +205,12 @@ export async function processSubmission(
       const id = await deps.send(record, "applicant");
       await persist({ ...record, applicantEmailId: id });
     }
-    await persist({ ...record, complete: true, leaseUntil: 0 });
+    await persist({
+      ...record,
+      complete: true,
+      completedAt: new Date(now()).toISOString(),
+      leaseUntil: 0,
+    });
     return { id: record.id, alreadySubmitted: false };
   } catch {
     try {
