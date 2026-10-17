@@ -304,7 +304,7 @@ export default function Application() {
               inputMode={
                 ["phone", "number", "date", "month"].includes(
                   f.type || "",
-                ) || f.key === "zip"
+                ) || f.key === "zip" || f.key === "ssn"
                   ? "numeric"
                   : f.type === "email"
                     ? "email"
@@ -315,8 +315,10 @@ export default function Application() {
                   ? 10
                   : f.type === "month"
                     ? 7
-                    : f.type === "phone"
-                        ? 12
+                        : f.type === "phone"
+                          ? 12
+                          : f.key === "ssn"
+                            ? 11
                         : f.key === "zip"
                           ? 10
                           : 250
@@ -326,6 +328,8 @@ export default function Application() {
                   ? "email"
                   : f.type === "phone"
                     ? "tel"
+                    : f.key === "ssn"
+                      ? "off"
                     : undefined
               }
               placeholder={
@@ -333,8 +337,10 @@ export default function Application() {
                   ? "MM/DD/YYYY"
                   : f.type === "month"
                     ? "MM/YYYY"
-                    : f.type === "phone"
-                        ? "773-555-0123"
+                  : f.type === "phone"
+                      ? "773-555-0123"
+                      : f.key === "ssn"
+                        ? "000-00-0000"
                         : undefined
               }
             />
