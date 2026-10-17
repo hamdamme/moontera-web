@@ -27,13 +27,13 @@ Updated 2026-10-17 on `codex/quick-90-day-reapply`.
 
 - **Legal/compliance:** a qualified reviewer and owner must approve exact Clearinghouse limited-query language and period, the prior-employer authorization language, the screening/full forms, and retention/deletion policy. Screening submission remains blocked unless the explicit approval environment settings are configured.
 - **Hosting:** verify the commercial-use plan and data-processing posture. Vercel's current terms restrict Hobby to personal/non-commercial use; a paid plan may cost money and no upgrade is authorized. The Vercel project listing works, but project inspection, deployment listing, and environment metadata requests return 403 for scope `moontera-web-s-projects`; no Vercel CLI is installed here.
-- **Email:** verify Resend's `moonterallc.com` sending domain and production configuration before real messages are sent.
+- **Email:** Resend reports `moonterallc.com` as **verified**. Production delivery acceptance still needs to confirm the configured sender, owner PDF attachment, and applicant receipt without sending real driver data.
 - **Owner acceptance:** test with synthetic records and confirm owner receipt PDFs, driver receipts, screening approval gate, OTP, draft resumption, and signed revision delivery.
 - **Repository release:** feature branch is pushed and draft PR [#11](https://github.com/hamdamme/moontera-web/pull/11) is open. Production was not deployed. The spec requires owner go-ahead after the review and acceptance gates; the request to deploy does not waive those open compliance and hosting gates.
 
 ## Next release sequence
 
 1. Owner obtains legal review and supplies the approved Clearinghouse consent text/period; decide signed-record retention.
-2. Owner confirms hosting plan and Resend domain/configuration.
+2. Owner confirms commercial hosting plan; run synthetic email-delivery acceptance using the verified Resend domain.
 3. Restore Vercel project scope access, run production-like acceptance tests, and review generated synthetic PDFs.
 4. Complete the required review/acceptance gates, mark PR #11 ready for review, and obtain owner release approval before production deployment.
