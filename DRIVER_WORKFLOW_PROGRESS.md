@@ -28,11 +28,11 @@ Updated 2026-10-17 on `codex/quick-90-day-reapply`.
 - **Hosting:** verify the commercial-use plan and data-processing posture. Vercel's current terms restrict Hobby to personal/non-commercial use; a paid plan may cost money and no upgrade is authorized. The Vercel project listing works, but project inspection, deployment listing, and environment metadata requests return 403 for scope `moontera-web-s-projects`; no Vercel CLI is installed here.
 - **Email:** verify Resend's `moonterallc.com` sending domain and production configuration before real messages are sent.
 - **Owner acceptance:** test with synthetic records and confirm owner receipt PDFs, driver receipts, screening approval gate, OTP, draft resumption, and signed revision delivery.
-- **Repository release:** not pushed and no PR created yet. Production was not deployed. The spec requires owner go-ahead after the review and acceptance gates; “deploy” does not waive those open compliance and hosting gates.
+- **Repository release:** feature branch is pushed and draft PR [#11](https://github.com/hamdamme/moontera-web/pull/11) is open. Production was not deployed. The spec requires owner go-ahead after the review and acceptance gates; the request to deploy does not waive those open compliance and hosting gates.
 
 ## Next release sequence
 
 1. Owner obtains legal review and supplies the approved Clearinghouse consent text/period; decide signed-record retention.
 2. Owner confirms hosting plan and Resend domain/configuration.
 3. Restore Vercel project scope access, run production-like acceptance tests, and review generated synthetic PDFs.
-4. Push this feature branch, open a PR, and obtain the required owner release approval before production deployment.
+4. Complete the required review/acceptance gates, mark PR #11 ready for review, and obtain owner release approval before production deployment.
