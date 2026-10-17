@@ -32,18 +32,15 @@ export default function Application() {
   const [pendingSubmission, setPendingSubmission] = useState(false);
   const [gateLoading, setGateLoading] = useState(true);
   const [fullAccess, setFullAccess] = useState(false);
-  const [invitationToken, setInvitationToken] = useState("");
   const [verifiedEmail, setVerifiedEmail] = useState("");
-  const [maskedEmail, setMaskedEmail] = useState("");
-  const [codeRequested, setCodeRequested] = useState(false);
-  const [verificationCode, setVerificationCode] = useState("");
-  const [gateBusy, setGateBusy] = useState(false);
   const [gateMessage, setGateMessage] = useState("");
   const [draftStatus, setDraftStatus] = useState("");
   const [saveNonce, setSaveNonce] = useState(0);
   const sending = useRef(false);
   const pending = useRef<Record<string, unknown> | null>(null);
   const draftVersion = useRef<string | null>(null);
+  const draftEditVersion = useRef(0);
+  const draftSaving = useRef(false);
   const [signatureMode, setSignatureMode] = useState("type");
   const [signatureName, setSignatureName] = useState("");
   const [signatureImage, setSignatureImage] = useState("");
@@ -57,6 +54,15 @@ export default function Application() {
     if (token) window.history.replaceState(null, "", "/apply");
     async function resume() {
       try {
+        if (token) {
+          const access = await fetch("/api/application/full/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token }),
+            cache: "no-store",
+          });
+          if (!access.ok) throw new Error("This invitation is invalid or expired.");
+        }
         const response = await fetch("/api/application/full/session", { cache: "no-store" });
         if (response.ok) {
           const result = await response.json();
@@ -70,14 +76,11 @@ export default function Application() {
             setDraftStatus(result.draftSavedAt ? `Draft restored from ${new Date(result.draftSavedAt).toLocaleString()}.` : "");
             setFullAccess(true);
           }
-        } else if (active && token) {
-          setInvitationToken(token);
-          setGateMessage("Verify the invited email address to access your application.");
         } else if (active) {
           setGateMessage("A current Full Application invitation is required to continue.");
         }
       } catch {
-        if (active) setGateMessage("Application access could not be checked. Reload this invitation to try again.");
+        if (active) setGateMessage("This invitation could not be opened. Reopen the link from Moontera’s email or contact info@moonterallc.com.");
       } finally {
         if (active) setGateLoading(false);
       }
@@ -88,6 +91,9 @@ export default function Application() {
   useEffect(() => {
     if (!fullAccess || !dirty || pendingSubmission) return;
     const timer = window.setTimeout(async () => {
+      if (draftSaving.current) return;
+      draftSaving.current = true;
+      const editVersionAtStart = draftEditVersion.current;
       setDraftStatus("Saving your private draft…");
       try {
         const response = await fetch("/api/application/full/draft", {
@@ -100,10 +106,9 @@ export default function Application() {
           const refreshedResponse = await fetch("/api/application/full/session", { cache: "no-store" });
           const refreshed = await refreshedResponse.json();
           if (refreshedResponse.ok) {
-            setAnswers(refreshed.answers);
             draftVersion.current = refreshed.draftVersion || null;
-            setDirty(false);
-            setDraftStatus("A newer saved draft was loaded from another session.");
+            setDraftStatus("Saving your latest answers…");
+            setSaveNonce((nonce) => nonce + 1);
             return;
           }
         }
@@ -115,10 +120,17 @@ export default function Application() {
         }
         if (!response.ok) throw new Error(result.message || "Draft could not be saved.");
         draftVersion.current = result.version;
-        setDirty(false);
-        setDraftStatus(`Draft saved at ${new Date(result.savedAt).toLocaleTimeString()}.`);
+        if (draftEditVersion.current === editVersionAtStart) {
+          setDirty(false);
+          setDraftStatus(`Draft saved at ${new Date(result.savedAt).toLocaleTimeString()}.`);
+        } else {
+          setDraftStatus("Saving your latest answers…");
+          setSaveNonce((nonce) => nonce + 1);
+        }
       } catch (error) {
         setDraftStatus(error instanceof Error ? `Draft not saved: ${error.message}` : "Draft not saved. Keep this tab open and retry.");
+      } finally {
+        draftSaving.current = false;
       }
     }, 900);
     return () => window.clearTimeout(timer);
@@ -159,6 +171,7 @@ export default function Application() {
   function update(group: string, index: number, field: Field, value: string) {
     if (pending.current || !fullAccess) return;
     pending.current = null;
+    draftEditVersion.current += 1;
     setDirty(true);
     setAnswers((a) => ({
       ...a,
@@ -183,57 +196,6 @@ export default function Application() {
       return;
     }
     go(step + 1);
-  }
-  async function sendVerificationCode() {
-    setGateBusy(true);
-    setGateMessage("");
-    try {
-      const response = await fetch("/api/application/full/otp/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: invitationToken }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Could not send a code.");
-      setMaskedEmail(result.maskedEmail || "your verified email");
-      setCodeRequested(true);
-      setGateMessage(result.sent ? "A verification code was sent." : "A recent code is still active. Check your email before requesting another.");
-    } catch (error) {
-      setGateMessage(error instanceof Error ? error.message : "Could not send a code.");
-    } finally {
-      setGateBusy(false);
-    }
-  }
-  async function verifyInvitationCode(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setGateBusy(true);
-    setGateMessage("");
-    try {
-      const response = await fetch("/api/application/full/otp/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: invitationToken, code: verificationCode }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Code verification failed.");
-      const sessionResponse = await fetch("/api/application/full/session", { cache: "no-store" });
-      const session = await sessionResponse.json();
-      if (!sessionResponse.ok) throw new Error(session.message || "Verified application could not be loaded.");
-      setAnswers(session.answers);
-      setVerifiedEmail(session.verifiedEmail);
-      setHasFullOnFile(!!session.onFile);
-      setRevisionNumber(session.revisionNumber || 0);
-      if (session.onFile) setReceipt(session.latestId || "submitted");
-      draftVersion.current = session.draftVersion || null;
-      setDraftStatus(session.draftSavedAt ? `Draft restored from ${new Date(session.draftSavedAt).toLocaleString()}.` : "");
-      setFullAccess(true);
-      setInvitationToken("");
-      setGateMessage("");
-    } catch (error) {
-      setGateMessage(error instanceof Error ? error.message : "Code verification failed.");
-    } finally {
-      setGateBusy(false);
-    }
   }
   function control(
     f: Field,
@@ -499,23 +461,7 @@ export default function Application() {
         <section className="apply-card" style={{ maxWidth: 620, margin: "auto" }}>
           <p className="apply-eyebrow">MOONTERA LLC</p>
           <h1>Full Driver Application</h1>
-          {invitationToken ? (
-            <>
-              <p className="apply-card-description">{codeRequested ? `Enter the six-digit code sent to ${maskedEmail}.` : "For your privacy, we verify the invited email before showing any saved application information."}</p>
-              {!codeRequested ? (
-                <button className="apply-primary" type="button" disabled={gateBusy} onClick={sendVerificationCode}>{gateBusy ? "Sending…" : "Email me a verification code"}</button>
-              ) : (
-                <form onSubmit={verifyInvitationCode}>
-                  <div className="apply-field">
-                    <label htmlFor="fullOtp">Six-digit verification code</label>
-                    <input id="fullOtp" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))} />
-                  </div>
-                  <button className="apply-primary" type="submit" disabled={gateBusy || verificationCode.length !== 6}>{gateBusy ? "Verifying…" : "Verify and continue"}</button>
-                  <button className="apply-back" type="button" disabled={gateBusy} onClick={sendVerificationCode}>Request a new code</button>
-                </form>
-              )}
-            </>
-          ) : <p className="apply-card-description">{gateMessage}</p>}
+          <p className="apply-card-description">{gateMessage}</p>
           {gateMessage && <p className="apply-notice" role="status">{gateMessage}</p>}
           <p className="apply-card-description">Need a valid invitation? Contact <a href="mailto:info@moonterallc.com">info@moonterallc.com</a>.</p>
         </section>
@@ -714,6 +660,7 @@ export default function Application() {
                               className="apply-link"
                               disabled={busy || pendingSubmission}
                               onClick={() => {
+                                draftEditVersion.current += 1;
                                 setAnswers((a) => ({
                                   ...a,
                                   [g.key]: a[g.key].filter((_, n) => n !== i),
@@ -740,6 +687,7 @@ export default function Application() {
                       className="apply-add"
                       type="button"
                       onClick={() => {
+                        draftEditVersion.current += 1;
                         setAnswers((a) => ({
                           ...a,
                           [g.key]: [...a[g.key], {}],

@@ -141,7 +141,7 @@ export default function ScreeningForm({
         {!loading && invite && receipt ? (
           <section className="screening-card screening-success">
             <h2>Screening consent submitted</h2>
-            <p>Your signed consents were sent to Moontera LLC. A confirmation email is on its way. It does not contain a copy of your signed form.</p>
+            <p>Your signed consents were delivered to Moontera LLC. A confirmation email is on its way. It does not contain a copy of your signed form.</p>
             <p>Reference: <strong>{receipt}</strong></p>
           </section>
         ) : null}
