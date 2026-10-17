@@ -19,6 +19,7 @@ execFileSync(
     "lib/applications/submission-pdf.ts",
     "lib/screening/pdf.ts",
     "lib/onboarding/draft-lifecycle.ts",
+    "lib/screening/disclosure-approval.ts",
     "--outDir",
     tmp,
     "--module",
@@ -42,6 +43,9 @@ const { createSubmissionPdf } = require(
 const { createScreeningPdf } = require(path.join(tmp, "lib/screening/pdf.js"));
 const { draftRetentionDeadline } = require(
   path.join(tmp, "lib/onboarding/draft-lifecycle.js"),
+);
+const { screeningTermsAreApproved } = require(
+  path.join(tmp, "lib/screening/disclosure-approval.js"),
 );
 const { initialAnswers, steps, dateKey, formatValue, validateStep } = require(
   path.join(tmp, "app/apply/schema.js"),
@@ -67,6 +71,11 @@ assert.equal(
   draftRetentionDeadline(originalDraftDeadline, replacementInviteExpires, originalDraftDeadline),
   replacementInviteExpires + 30 * 24 * 60 * 60 * 1000,
 );
+assert.equal(screeningTermsAreApproved(undefined, "Approved period: one year", "one year"), false);
+assert.equal(screeningTermsAreApproved("true", undefined, "one year"), false);
+assert.equal(screeningTermsAreApproved("true", "Approved period: one year", ""), false);
+assert.equal(screeningTermsAreApproved("true", "Approved period: two years", "one year"), false);
+assert.equal(screeningTermsAreApproved("true", "Approved period: ONE YEAR", "one year"), true);
 const raw = {
   requestId: id,
   quick: {
@@ -402,6 +411,6 @@ const deps = {
   fs.writeFileSync(path.join(out, "Moontera-screening-sample.pdf"), screeningPdf);
   assert(screeningPdf.length > 1000 && revisedPdf.length > 1000);
   console.log(
-    "PASS: validation, missing groups, date checks, email normalization, draft retention deadlines, concurrent duplicate prevention, repeat requests, partial email retry, timeout cutoff, and formatted PDFs.",
+    "PASS: validation, missing groups, date checks, email normalization, screening release gate, draft retention deadlines, concurrent duplicate prevention, repeat requests, partial email retry, timeout cutoff, and formatted PDFs.",
   );
 })().finally(() => fs.rmSync(tmp, { recursive: true, force: true }));

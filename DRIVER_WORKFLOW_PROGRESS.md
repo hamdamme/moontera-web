@@ -16,7 +16,7 @@ Updated 2026-10-17 on `codex/quick-90-day-reapply`.
 
 ## Verification
 
-- `npm run test:application` — passed, including validation, Quick retry/90-day behavior, draft sanitization and fixed retention deadlines across replacement invites, PDF generation, and synthetic form PDFs.
+- `npm run test:application` — passed, including validation, Quick retry/90-day behavior, draft sanitization and fixed retention deadlines across replacement invites, screening release-gate conditions, PDF generation, and synthetic form PDFs.
 - `npm run lint` — passed.
 - `npx tsc --noEmit --incremental false` — passed.
 - `npm run build` — passed with Next.js 16.2.4 after the sandbox granted build-output access.

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import documents from "@/app/apply/documents/documents.json";
+import { screeningTermsAreApproved } from "./disclosure-approval";
 
 type DocumentSection = { title: string; body: string };
 type DisclosureDocument = { id: string; title: string; sections: DocumentSection[] };
@@ -12,11 +13,11 @@ export function getScreeningDisclosures() {
   if (!mvr || !psp) throw new Error("Required screening disclosures are missing");
   const clearinghouseText = (process.env.CLEARINGHOUSE_LIMITED_QUERY_TEXT || "").trim();
   const consentPeriod = (process.env.CLEARINGHOUSE_CONSENT_PERIOD || "").trim();
-  const approved =
-    process.env.SCREENING_LEGAL_APPROVED === "true" &&
-    !!clearinghouseText &&
-    !!consentPeriod &&
-    clearinghouseText.toLowerCase().includes(consentPeriod.toLowerCase());
+  const approved = screeningTermsAreApproved(
+    process.env.SCREENING_LEGAL_APPROVED,
+    clearinghouseText,
+    consentPeriod,
+  );
   const contentHash = createHash("sha256")
     .update(JSON.stringify({ mvr, psp, clearinghouseText, consentPeriod }))
     .digest("hex");
