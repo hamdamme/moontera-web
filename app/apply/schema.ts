@@ -5,18 +5,19 @@ export type Field = {
     | "text"
     | "email"
     | "phone"
-    | "ssn"
     | "date"
     | "month"
     | "number"
     | "select"
     | "yesno"
+    | "checkbox"
     | "textarea";
   required?: boolean;
   options?: string[];
   hint?: string;
   when?: [string, string];
   past?: boolean;
+  readOnly?: boolean;
 };
 export type Group = {
   key: string;
@@ -26,6 +27,7 @@ export type Group = {
   repeat?: boolean;
   minimum?: number;
   item?: string;
+  fixedRows?: string[];
 };
 export type Step = {
   title: string;
@@ -79,7 +81,7 @@ export const steps: Step[] = [
           }),
           f("dob", "Date of birth", "date", true, { past: true }),
           f("phone", "Phone number", "phone", true),
-          f("email", "Email address", "email", true),
+          f("email", "Email address", "email", true, { readOnly: true }),
           f("startDate", "Available start date", "date", true),
           f("referral", "Who referred you?"),
         ],
@@ -251,6 +253,7 @@ export const steps: Step[] = [
           f("class", "License class", "select", true, {
             options: ["Class A", "Class B", "Class C", "Other"],
           }),
+          f("issued", "Issue date", "date", true, { past: true }),
           f("expires", "Expiration date", "date", true),
           f("endorsements", "Endorsements"),
         ],
@@ -337,55 +340,36 @@ export const steps: Step[] = [
         title: "Medical card & DOT information",
         fields: [
           f("expires", "Medical card expiration date", "date", true),
-          f("lastTest", "Last drug and alcohol test date", "date", false, {
-            past: true,
-            hint: "Leave empty if you have not previously taken a DOT test.",
-          }),
         ],
-      },
-      {
-        key: "clearinghouse",
-        title: "FMCSA Drug & Alcohol Clearinghouse consent",
-        description:
-          "I authorize Moontera LLC to conduct required FMCSA Drug & Alcohol Clearinghouse queries as permitted under 49 CFR Part 382, including pre-employment and annual limited queries. I understand that full queries, including the pre-employment full query, require my separate electronic consent in the FMCSA Clearinghouse portal. Refusal to provide required consent may prevent me from performing safety-sensitive duties, including operating a commercial motor vehicle.",
-        fields: [
-          f("consent", "Clearinghouse acknowledgment", "select", true, {
-            options: ["I have read and agree"],
-          }),
-          f("signature", "Typed full name / consent signature", "text", true),
-          f("date", "Consent date", "date", true, { past: true }),
-        ],
-      },
-      {
-        key: "communications",
-        title: "Optional SMS consent",
-        description:
-          "I consent to receive conversational and informational SMS messages from Moontera LLC regarding my inquiry. Reply STOP to opt out or HELP for support. Message and data rates may apply. Messaging frequency may vary. SMS consent is optional and is not required to apply. See our Privacy Policy and Terms of Use in the footer.",
-        fields: [f("sms", "May we send you SMS updates?", "yesno", false)],
       },
       {
         key: "experience",
         title: "Driving experience",
-        repeat: true,
-        minimum: 0,
-        item: "equipment record",
+        fixedRows: [
+          "Straight Truck",
+          "Tractor & Semi-Trailer",
+          "Tractor – Two Trailers",
+          "Tractor – Three Trailers",
+          "Motorcoach / School Bus",
+          "Other",
+        ],
+        item: "equipment experience",
         fields: [
-          f("equipment", "Equipment type", "select", true, {
-            options: [
-              "Straight truck",
-              "Tractor & semi-trailer",
-              "Tractor - two trailers",
-              "Tractor - three trailers",
-              "Motorcoach / school bus",
-              "Other",
-            ],
+          f("selected", "Check if applicable", "checkbox"),
+          f("from", "From", "month", true, {
+            past: true,
+            when: ["selected", "Yes"],
           }),
-          f("other", "Specify equipment", "text", true, {
-            when: ["equipment", "Other"],
+          f("to", "To", "month", true, {
+            past: true,
+            when: ["selected", "Yes"],
           }),
-          f("from", "From", "month", true, { past: true }),
-          f("to", "To", "month", true, { past: true }),
-          f("miles", "Approximate miles", "number", true),
+          f("miles", "Approximate miles", "number", true, {
+            when: ["selected", "Yes"],
+          }),
+          f("other", "Describe other equipment", "text", true, {
+            when: ["selected", "Yes"],
+          }),
         ],
       },
       {
@@ -465,8 +449,22 @@ export const steps: Step[] = [
         ],
       },
       {
+        key: "drugTestAuthorization",
+        title: "Authorization to Obtain Past Drug & Alcohol Test Results",
+        description:
+          "I authorize Moontera LLC to obtain all DOT-required drug and alcohol testing records from previous employers, including positive test results, refusals, and return-to-duty documentation as permitted by federal regulations.\n\nI authorize Moontera LLC to obtain all DOT-required drug and alcohol testing records from all companies for which I worked or applied as a driver during the past two (2) years.",
+        fields: [
+          f("authorized", "I have read and agree to this authorization", "select", true, {
+            options: ["I agree"],
+          }),
+          f("typedName", "Typed full legal name", "text", true),
+        ],
+      },
+      {
         key: "testEmployers",
-        title: "Previous employers / applications (past two years)",
+        title: "Related employers / applications (past two years)",
+        description:
+          "List each company where you worked or applied as a driver during the past two years, under the authorization immediately above.",
         repeat: true,
         minimum: 0,
         item: "company",
@@ -484,11 +482,14 @@ export const initialAnswers = (): Answers =>
       .flatMap((s) => s.groups)
       .map((g) => [
         g.key,
-        Array.from({ length: g.repeat ? g.minimum || 0 : 1 }, () => ({})),
+        g.fixedRows
+          ? g.fixedRows.map((equipment) => ({ equipment }))
+          : Array.from({ length: g.repeat ? g.minimum || 0 : 1 }, () => ({})),
       ]),
   );
 export const visible = (f: Field, row: Record<string, string>) =>
-  !f.when || row[f.when[0]] === f.when[1];
+  (!f.when || row[f.when[0]] === f.when[1]) &&
+  !(f.key === "other" && row.equipment && row.equipment !== "Other");
 export const path = (g: string, i: number, k: string) => `${g}.${i}.${k}`;
 export function formatValue(f: Field, v: string) {
   if (f.type === "date" || f.type === "month") {
@@ -500,10 +501,6 @@ export function formatValue(f: Field, v: string) {
     )
       .filter(Boolean)
       .join("/");
-  }
-  if (f.type === "ssn") {
-    const d = v.replace(/\D/g, "").slice(0, 9);
-    return [d.slice(0, 3), d.slice(3, 5), d.slice(5)].filter(Boolean).join("-");
   }
   if (f.type === "phone") {
     const d = v.replace(/\D/g, "").slice(0, 10);
@@ -553,8 +550,6 @@ export function validateStep(step: number, a: Answers) {
             e = "Enter a valid email address.";
           if (f.type === "phone" && !/^\d{3}-\d{3}-\d{4}$/.test(v))
             e = "Enter a 10-digit phone number.";
-          if (f.type === "ssn" && !/^\d{3}-\d{2}-\d{4}$/.test(v))
-            e = "Enter nine digits, formatted XXX-XX-XXXX.";
           if (f.key === "zip" && !/^\d{5}(-\d{4})?$/.test(v))
             e = "Enter a 5- or 9-digit ZIP code.";
           if (f.options && !f.options.includes(v))

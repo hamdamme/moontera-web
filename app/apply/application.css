@@ -390,6 +390,55 @@
   font-size: 13px;
   text-transform: capitalize;
 }
+.apply-experience-table {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.apply-experience-header,
+.apply-experience-data {
+  display: grid;
+  grid-template-columns: 1.55fr repeat(3, minmax(115px, 1fr));
+  align-items: start;
+  gap: 12px;
+  padding: 14px;
+}
+.apply-experience-header {
+  background: #f3f6fa;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.apply-experience-data + .apply-experience-data {
+  border-top: 1px solid var(--border);
+}
+.apply-experience-type {
+  display: grid;
+  gap: 12px;
+}
+.apply-table-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+  min-height: 36px;
+}
+.apply-table-checkbox input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--blue);
+}
+.apply-experience-data [role="cell"] .apply-field {
+  gap: 5px;
+}
+.apply-experience-data [role="cell"] .apply-field label {
+  display: none;
+}
+.apply-experience-data [role="cell"] .apply-input-wrap {
+  margin: 0;
+}
 .apply-link {
   background: transparent;
   color: var(--blue);
@@ -610,6 +659,29 @@
   .apply-grid,
   .apply-review-list {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .apply-experience-table {
+    border: 0;
+    overflow: visible;
+  }
+  .apply-experience-header {
+    display: none;
+  }
+  .apply-experience-data {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    margin-top: 12px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+  }
+  .apply-experience-data + .apply-experience-data {
+    border-top: 1px solid var(--border);
+  }
+  .apply-experience-type {
+    grid-column: 1 / -1;
+  }
+  .apply-experience-data [role="cell"] .apply-field label {
+    display: block;
   }
   .apply-card-title {
     margin-bottom: 22px;

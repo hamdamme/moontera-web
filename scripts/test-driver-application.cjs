@@ -17,6 +17,7 @@ execFileSync(
     "lib/applications/model.ts",
     "lib/applications/workflow.ts",
     "lib/applications/submission-pdf.ts",
+    "lib/screening/pdf.ts",
     "--outDir",
     tmp,
     "--module",
@@ -28,7 +29,7 @@ execFileSync(
   ],
   { cwd: root, stdio: "inherit" },
 );
-const { validateSubmission } = require(
+const { validateSubmission, sanitizeDraftAnswers } = require(
   path.join(tmp, "lib/applications/model.js"),
 );
 const { processSubmission } = require(
@@ -37,6 +38,7 @@ const { processSubmission } = require(
 const { createSubmissionPdf } = require(
   path.join(tmp, "lib/applications/submission-pdf.js"),
 );
+const { createScreeningPdf } = require(path.join(tmp, "lib/screening/pdf.js"));
 const { initialAnswers, steps, dateKey, formatValue, validateStep } = require(
   path.join(tmp, "app/apply/schema.js"),
 );
@@ -151,13 +153,45 @@ a.eligibility[0] = { work: "Yes", age: "Yes", previous: "No" };
 a.workNotes[0].notes =
   "No previous employment; sample application for testing.";
 a.medical[0].expires = "05/15/2028";
-a.clearinghouse[0].signature = "José Example";
+assert.equal(steps.flatMap((step) => step.groups).some((g) => g.key === "clearinghouse"), false);
+assert.equal(steps.flatMap((step) => step.groups).some((g) => g.key === "communications"), false);
+assert.equal(steps.flatMap((step) => step.groups).some((g) => g.fields.some((f) => f.key === "lastTest")), false);
+assert.equal(steps.flatMap((step) => step.groups).find((g) => g.key === "licenses").fields.some((f) => f.key === "issued"), true);
+assert.equal(steps.flatMap((step) => step.groups).some((g) => g.fields.some((f) => f.type === "ssn")), false);
+assert.equal(steps.flatMap((step) => step.groups).some((g) => g.key === "drugTestAuthorization"), true);
+const experienceGroup = steps.flatMap((step) => step.groups).find((g) => g.key === "experience");
+assert.deepEqual(experienceGroup.fixedRows, [
+  "Straight Truck",
+  "Tractor & Semi-Trailer",
+  "Tractor – Two Trailers",
+  "Tractor – Three Trailers",
+  "Motorcoach / School Bus",
+  "Other",
+]);
+a.experience[0] = {
+  ...a.experience[0],
+  equipment: "Tampered type",
+  selected: "Yes",
+  from: "01/2020",
+  to: "02/2021",
+  miles: "100000",
+};
+a.personal[0].ssn = "123-45-6789";
 const full = validateSubmission("full", {
   requestId: id,
   answers: a,
   certified: true,
   signature: { mode: "type", name: "José Example", image: "" },
 });
+assert.equal(full.answers.experience[0].equipment, "Straight Truck");
+assert.equal(full.answers.experience.filter((row) => row.selected === "Yes").length, 1);
+assert.equal(Object.hasOwn(full.answers.personal[0], "ssn"), false);
+assert.equal(full.answers.drugTestAuthorization[0].authorized, "I agree");
+const draft = sanitizeDraftAnswers({ answers: a }, "alex@example.com");
+assert.equal(draft.personal[0].email, "alex@example.com");
+assert.equal(Object.hasOwn(draft.personal[0], "ssn"), false);
+assert.equal(draft.experience[0].equipment, "Straight Truck");
+assert.equal(sanitizeDraftAnswers({ answers: initialAnswers() }, "alex@example.com").personal[0].email, "alex@example.com");
 const omitted = structuredClone(a);
 omitted.personal = [];
 assert.throws(() =>
@@ -320,6 +354,29 @@ const deps = {
     );
     assert(bytes.length > 1000);
   }
+  const revisedPdf = await createSubmissionPdf(full, "SAMPLE-REVISION-1", "2026-10-17T15:00:00.000Z", font, template, 1);
+  fs.writeFileSync(path.join(out, "Moontera-full-revision-1-sample.pdf"), revisedPdf);
+  const legalDocs = require(path.join(root, "app/apply/documents/documents.json"));
+  const screeningPdf = await createScreeningPdf({
+    id: "SAMPLE-SCREENING-ONLY",
+    name: "Alex Example",
+    email: "alex@example.com",
+    submittedAt: "2026-10-17T15:00:00.000Z",
+    certificationDate: "2026-10-17",
+    mvrName: "Alex Example",
+    pspName: "Alex Example",
+    clearinghouseName: "Alex Example",
+    certificationName: "Alex Example",
+    signedAt: "2026-10-17T15:00:00.000Z",
+    disclosureHash: "SYNTHETIC-ONLY",
+  }, {
+    mvr: legalDocs.find((document) => document.id === "mvr"),
+    psp: legalDocs.find((document) => document.id === "psp"),
+    clearinghouseText: "Synthetic sample only; this wording is not approved for driver use.",
+    consentPeriod: "SAMPLE PERIOD",
+  }, font, template);
+  fs.writeFileSync(path.join(out, "Moontera-screening-sample.pdf"), screeningPdf);
+  assert(screeningPdf.length > 1000 && revisedPdf.length > 1000);
   console.log(
     "PASS: validation, missing groups, date checks, email normalization, concurrent duplicate prevention, repeat requests, partial email retry, timeout cutoff, and formatted PDFs.",
   );

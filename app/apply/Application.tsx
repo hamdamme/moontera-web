@@ -27,17 +27,102 @@ export default function Application() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [receipt, setReceipt] = useState("");
+  const [hasFullOnFile, setHasFullOnFile] = useState(false);
+  const [revisionNumber, setRevisionNumber] = useState(0);
   const [pendingSubmission, setPendingSubmission] = useState(false);
+  const [gateLoading, setGateLoading] = useState(true);
+  const [fullAccess, setFullAccess] = useState(false);
+  const [invitationToken, setInvitationToken] = useState("");
+  const [verifiedEmail, setVerifiedEmail] = useState("");
+  const [maskedEmail, setMaskedEmail] = useState("");
+  const [codeRequested, setCodeRequested] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [gateBusy, setGateBusy] = useState(false);
+  const [gateMessage, setGateMessage] = useState("");
+  const [draftStatus, setDraftStatus] = useState("");
+  const [saveNonce, setSaveNonce] = useState(0);
   const sending = useRef(false);
   const pending = useRef<Record<string, unknown> | null>(null);
+  const draftVersion = useRef<string | null>(null);
   const [signatureMode, setSignatureMode] = useState("type");
   const [signatureName, setSignatureName] = useState("");
   const [signatureImage, setSignatureImage] = useState("");
   const [agreed, setAgreed] = useState(false);
-  const [showSsn, setShowSsn] = useState(false);
   const canvas = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
   const title = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    let active = true;
+    const token = new URLSearchParams(window.location.hash.slice(1)).get("token") || "";
+    if (token) window.history.replaceState(null, "", "/apply");
+    async function resume() {
+      try {
+        const response = await fetch("/api/application/full/session", { cache: "no-store" });
+        if (response.ok) {
+          const result = await response.json();
+          if (active) {
+            setAnswers(result.answers);
+            setVerifiedEmail(result.verifiedEmail);
+            setHasFullOnFile(!!result.onFile);
+            setRevisionNumber(result.revisionNumber || 0);
+            if (result.onFile) setReceipt(result.latestId || "submitted");
+            draftVersion.current = result.draftVersion || null;
+            setDraftStatus(result.draftSavedAt ? `Draft restored from ${new Date(result.draftSavedAt).toLocaleString()}.` : "");
+            setFullAccess(true);
+          }
+        } else if (active && token) {
+          setInvitationToken(token);
+          setGateMessage("Verify the invited email address to access your application.");
+        } else if (active) {
+          setGateMessage("A current Full Application invitation is required to continue.");
+        }
+      } catch {
+        if (active) setGateMessage("Application access could not be checked. Reload this invitation to try again.");
+      } finally {
+        if (active) setGateLoading(false);
+      }
+    }
+    void resume();
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    if (!fullAccess || !dirty || pendingSubmission) return;
+    const timer = window.setTimeout(async () => {
+      setDraftStatus("Saving your private draft…");
+      try {
+        const response = await fetch("/api/application/full/draft", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ answers, version: draftVersion.current }),
+        });
+        const result = await response.json();
+        if (response.status === 409) {
+          const refreshedResponse = await fetch("/api/application/full/session", { cache: "no-store" });
+          const refreshed = await refreshedResponse.json();
+          if (refreshedResponse.ok) {
+            setAnswers(refreshed.answers);
+            draftVersion.current = refreshed.draftVersion || null;
+            setDirty(false);
+            setDraftStatus("A newer saved draft was loaded from another session.");
+            return;
+          }
+        }
+        if (response.status === 401) {
+          setFullAccess(false);
+          setGateMessage("Your verified session expired. Reopen your secure invitation to continue; your saved draft is retained.");
+          setDraftStatus("Draft saved previously. Sign in again to continue.");
+          return;
+        }
+        if (!response.ok) throw new Error(result.message || "Draft could not be saved.");
+        draftVersion.current = result.version;
+        setDirty(false);
+        setDraftStatus(`Draft saved at ${new Date(result.savedAt).toLocaleTimeString()}.`);
+      } catch (error) {
+        setDraftStatus(error instanceof Error ? `Draft not saved: ${error.message}` : "Draft not saved. Keep this tab open and retry.");
+      }
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [answers, dirty, fullAccess, pendingSubmission, saveNonce]);
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
       if (dirty) {
@@ -72,7 +157,8 @@ export default function Application() {
     });
   }
   function update(group: string, index: number, field: Field, value: string) {
-    if (pending.current) return;
+    if (pending.current || !fullAccess) return;
+    pending.current = null;
     setDirty(true);
     setAnswers((a) => ({
       ...a,
@@ -97,6 +183,57 @@ export default function Application() {
       return;
     }
     go(step + 1);
+  }
+  async function sendVerificationCode() {
+    setGateBusy(true);
+    setGateMessage("");
+    try {
+      const response = await fetch("/api/application/full/otp/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: invitationToken }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Could not send a code.");
+      setMaskedEmail(result.maskedEmail || "your verified email");
+      setCodeRequested(true);
+      setGateMessage(result.sent ? "A verification code was sent." : "A recent code is still active. Check your email before requesting another.");
+    } catch (error) {
+      setGateMessage(error instanceof Error ? error.message : "Could not send a code.");
+    } finally {
+      setGateBusy(false);
+    }
+  }
+  async function verifyInvitationCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setGateBusy(true);
+    setGateMessage("");
+    try {
+      const response = await fetch("/api/application/full/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: invitationToken, code: verificationCode }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Code verification failed.");
+      const sessionResponse = await fetch("/api/application/full/session", { cache: "no-store" });
+      const session = await sessionResponse.json();
+      if (!sessionResponse.ok) throw new Error(session.message || "Verified application could not be loaded.");
+      setAnswers(session.answers);
+      setVerifiedEmail(session.verifiedEmail);
+      setHasFullOnFile(!!session.onFile);
+      setRevisionNumber(session.revisionNumber || 0);
+      if (session.onFile) setReceipt(session.latestId || "submitted");
+      draftVersion.current = session.draftVersion || null;
+      setDraftStatus(session.draftSavedAt ? `Draft restored from ${new Date(session.draftSavedAt).toLocaleString()}.` : "");
+      setFullAccess(true);
+      setInvitationToken("");
+      setGateMessage("");
+    } catch (error) {
+      setGateMessage(error instanceof Error ? error.message : "Code verification failed.");
+    } finally {
+      setGateBusy(false);
+    }
   }
   function control(
     f: Field,
@@ -123,6 +260,18 @@ export default function Application() {
           ? `${id}-hint`
           : undefined,
     };
+    if (f.type === "checkbox")
+      return (
+        <label className="apply-table-checkbox" htmlFor={id}>
+          <input
+            {...props}
+            type="checkbox"
+            checked={value === "Yes"}
+            onChange={(e) => update(g, i, f, e.target.checked ? "Yes" : "No")}
+          />
+          {f.label}
+        </label>
+      );
     if (f.type === "yesno")
       return (
         <fieldset
@@ -188,17 +337,10 @@ export default function Application() {
           <div className="apply-input-wrap">
             <input
               {...props}
-              type={
-                f.type === "ssn"
-                  ? showSsn
-                    ? "text"
-                    : "password"
-                  : f.type === "email"
-                    ? "email"
-                    : "text"
-              }
+              type={f.type === "email" ? "email" : "text"}
+              readOnly={f.readOnly}
               inputMode={
-                ["ssn", "phone", "number", "date", "month"].includes(
+                ["phone", "number", "date", "month"].includes(
                   f.type || "",
                 ) || f.key === "zip"
                   ? "numeric"
@@ -211,49 +353,29 @@ export default function Application() {
                   ? 10
                   : f.type === "month"
                     ? 7
-                    : f.type === "ssn"
-                      ? 11
-                      : f.type === "phone"
+                    : f.type === "phone"
                         ? 12
                         : f.key === "zip"
                           ? 10
                           : 250
               }
               autoComplete={
-                f.type === "ssn"
-                  ? "off"
-                  : f.type === "email"
-                    ? "email"
-                    : f.type === "phone"
-                      ? "tel"
-                      : undefined
+                f.type === "email"
+                  ? "email"
+                  : f.type === "phone"
+                    ? "tel"
+                    : undefined
               }
               placeholder={
                 f.type === "date"
                   ? "MM/DD/YYYY"
                   : f.type === "month"
                     ? "MM/YYYY"
-                    : f.type === "ssn"
-                      ? "123-45-6789"
-                      : f.type === "phone"
+                    : f.type === "phone"
                         ? "773-555-0123"
                         : undefined
               }
             />
-            {f.type === "ssn" && (
-              <button
-                type="button"
-                className="apply-reveal"
-                aria-label={
-                  showSsn
-                    ? "Hide Social Security number"
-                    : "Show Social Security number"
-                }
-                onClick={() => setShowSsn(!showSsn)}
-              >
-                {showSsn ? "Hide" : "Show"}
-              </button>
-            )}
           </div>
         )}
         {f.hint && <small id={`${id}-hint`}>{f.hint}</small>}
@@ -291,7 +413,7 @@ export default function Application() {
     }
   }
   async function submitApplication() {
-    if (sending.current || receipt) return;
+    if (sending.current || receipt || !fullAccess) return;
     setNotice("");
     for (let i = 0; i < steps.length; i++) {
       const e = validateStep(i, answers);
@@ -326,17 +448,19 @@ export default function Application() {
             image: signatureImage,
           },
           certified: agreed,
-          requestId: await submissionId("full", answers.personal[0].email),
+          requestId: hasFullOnFile
+            ? crypto.randomUUID()
+            : await submissionId("full", answers.personal[0].email),
         };
       setPendingSubmission(true);
-      const response = await fetch("/api/application/full", {
+      const response = await fetch(hasFullOnFile ? "/api/application/full/revision" : "/api/application/full", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(pending.current),
       });
       const result = await response.json();
       if (!response.ok || !result.success) {
-        if (response.status === 400) {
+        if (response.status === 400 || response.status === 409) {
           pending.current = null;
           setPendingSubmission(false);
         }
@@ -345,6 +469,9 @@ export default function Application() {
         );
       }
       setDirty(false);
+      setHasFullOnFile(true);
+      setRevisionNumber(result.revisionNumber || 0);
+      pending.current = null;
       setReceipt(result.id);
     } catch (error) {
       setNotice(
@@ -357,6 +484,43 @@ export default function Application() {
       setBusy(false);
     }
   }
+  if (gateLoading)
+    return (
+      <main className="apply-shell" style={{ padding: "64px 24px" }}>
+        <section className="apply-card" style={{ maxWidth: 620, margin: "auto" }}>
+          <h1>Checking your invitation</h1>
+          <p className="apply-card-description">We are verifying secure access to the Full Driver Application.</p>
+        </section>
+      </main>
+    );
+  if (!fullAccess)
+    return (
+      <main className="apply-shell" style={{ padding: "64px 24px" }}>
+        <section className="apply-card" style={{ maxWidth: 620, margin: "auto" }}>
+          <p className="apply-eyebrow">MOONTERA LLC</p>
+          <h1>Full Driver Application</h1>
+          {invitationToken ? (
+            <>
+              <p className="apply-card-description">{codeRequested ? `Enter the six-digit code sent to ${maskedEmail}.` : "For your privacy, we verify the invited email before showing any saved application information."}</p>
+              {!codeRequested ? (
+                <button className="apply-primary" type="button" disabled={gateBusy} onClick={sendVerificationCode}>{gateBusy ? "Sending…" : "Email me a verification code"}</button>
+              ) : (
+                <form onSubmit={verifyInvitationCode}>
+                  <div className="apply-field">
+                    <label htmlFor="fullOtp">Six-digit verification code</label>
+                    <input id="fullOtp" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, "").slice(0, 6))} />
+                  </div>
+                  <button className="apply-primary" type="submit" disabled={gateBusy || verificationCode.length !== 6}>{gateBusy ? "Verifying…" : "Verify and continue"}</button>
+                  <button className="apply-back" type="button" disabled={gateBusy} onClick={sendVerificationCode}>Request a new code</button>
+                </form>
+              )}
+            </>
+          ) : <p className="apply-card-description">{gateMessage}</p>}
+          {gateMessage && <p className="apply-notice" role="status">{gateMessage}</p>}
+          <p className="apply-card-description">Need a valid invitation? Contact <a href="mailto:info@moonterallc.com">info@moonterallc.com</a>.</p>
+        </section>
+      </main>
+    );
   if (receipt)
     return (
       <main className="apply-shell" style={{ padding: "64px 24px" }}>
@@ -370,10 +534,25 @@ export default function Application() {
             LLC. A confirmation email is on its way.
           </p>
           <p className="apply-card-description">Reference: {receipt}</p>
-          <p>
-            Please do not apply again. For corrections, contact{" "}
-            <a href="mailto:info@moonterallc.com">info@moonterallc.com</a>.
-          </p>
+          {hasFullOnFile ? (
+            <>
+              {revisionNumber > 0 && <p className="apply-card-description">Latest signed revision: {revisionNumber}</p>}
+              <p>To correct information, edit the saved application and sign the updated version. Your changes remain a draft until you reconfirm your signature.</p>
+              <button className="apply-primary" type="button" onClick={() => {
+                setReceipt("");
+                setStep(0);
+                setAgreed(false);
+                setSignatureName("");
+                setSignatureImage("");
+                setSignatureMode("type");
+                setPendingSubmission(false);
+                pending.current = null;
+                setNotice("");
+              }}>Edit application</button>
+            </>
+          ) : (
+            <p>Please do not apply again. For corrections, contact <a href="mailto:info@moonterallc.com">info@moonterallc.com</a>.</p>
+          )}
           <a href="/drivers" className="apply-primary">
             Return to driver opportunities
           </a>
@@ -450,7 +629,7 @@ export default function Application() {
           </div>
           <header className="apply-heading">
             <h2 ref={title} tabIndex={-1}>
-              {current?.heading || "Review. Sign. Download."}
+              {current?.heading || "Review. Sign. Submit."}
             </h2>
             <p>
               {current?.description ||
@@ -458,8 +637,11 @@ export default function Application() {
             </p>
           </header>
           <div className="apply-session">
-            Your answers stay in this tab only. Closing or refreshing it clears
-            your progress.
+            Verified email: {verifiedEmail}. Your incomplete answers save privately as you work.
+            {draftStatus && <span aria-live="polite"> {draftStatus}</span>}
+            {dirty && draftStatus.startsWith("Draft not saved") && (
+              <button className="apply-link" type="button" onClick={() => setSaveNonce((value) => value + 1)}>Retry draft save</button>
+            )}
           </div>
           {notice && (
             <div className="apply-notice" role="status">
@@ -486,7 +668,37 @@ export default function Application() {
                   {!answers[g.key].length && (
                     <div className="apply-empty">No entries added yet.</div>
                   )}
-                  {answers[g.key].map((row, i) => (
+                  {g.fixedRows ? (
+                    <div className="apply-experience-table" role="table" aria-label="Driving experience">
+                      <div className="apply-experience-header" role="row">
+                        {[
+                          "Equipment Type",
+                          "From (MM/YYYY)",
+                          "To (MM/YYYY)",
+                          "Approximate Miles",
+                        ].map((label) => (
+                          <span role="columnheader" key={label}>{label}</span>
+                        ))}
+                      </div>
+                      {answers[g.key].map((row, i) => (
+                        <div className="apply-experience-data" role="row" key={`${g.key}-${i}`}>
+                          <div role="rowheader" className="apply-experience-type">
+                            <strong>{row.equipment}</strong>
+                            {control(g.fields[0], g.key, i, row)}
+                            {row.equipment === "Other" && row.selected === "Yes" &&
+                              control(g.fields[4], g.key, i, row)}
+                          </div>
+                          {g.fields.slice(1, 4).map((field) => (
+                            <div role="cell" key={field.key}>
+                              {visible(field, row) ? (
+                                <div data-label={field.label}>{control(field, g.key, i, row)}</div>
+                              ) : <span aria-hidden="true">—</span>}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  ) : answers[g.key].map((row, i) => (
                     <div
                       className={g.repeat ? "apply-record" : ""}
                       key={`${g.key}-${i}`}
@@ -573,7 +785,23 @@ export default function Application() {
                   {s.groups.map((g) => (
                     <div className="apply-review-group" key={g.key}>
                       <h4>{g.title}</h4>
-                      {!answers[g.key].length ? (
+                      {g.fixedRows ? (
+                        answers[g.key].some((row) => row.selected === "Yes") ? (
+                          answers[g.key]
+                            .filter((row) => row.selected === "Yes")
+                            .map((row, index) => (
+                              <dl className="apply-review-list" key={`${row.equipment}-${index}`}>
+                                <div><dt>Equipment Type</dt><dd>{row.equipment}</dd></div>
+                                <div><dt>From</dt><dd>{row.from}</dd></div>
+                                <div><dt>To</dt><dd>{row.to}</dd></div>
+                                <div><dt>Approximate Miles</dt><dd>{row.miles}</dd></div>
+                                {row.equipment === "Other" && (
+                                  <div className="wide"><dt>Other Equipment</dt><dd>{row.other}</dd></div>
+                                )}
+                              </dl>
+                            ))
+                        ) : <p>No driving experience selected</p>
+                      ) : !answers[g.key].length ? (
                         <p>No records entered</p>
                       ) : (
                         answers[g.key].map((row, n) => (
@@ -590,9 +818,7 @@ export default function Application() {
                                 <div key={f.key}>
                                   <dt>{f.label}</dt>
                                   <dd>
-                                    {f.type === "ssn" && row[f.key]
-                                      ? `•••-••-${row[f.key].slice(-4)}`
-                                      : row[f.key] || "Not provided"}
+                                    {row[f.key] || "Not provided"}
                                   </dd>
                                 </div>
                               ))}

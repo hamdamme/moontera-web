@@ -1,28 +1,38 @@
 # Driver workflow implementation status
 
-Updated 2026-10-16 on `codex/quick-90-day-reapply`.
+Updated 2026-10-17 on `codex/quick-90-day-reapply`.
 
-## Completed and verified
+## Implemented
 
-- Quick Application reapplication is available after 90 full days from the last successful submission. Historical records are archived and same-request retries remain idempotent.
-- Quick intake validates contact details, CDL and medical-card dates, conditional DOT test date, and optional last four SSN digits. It does not collect a full SSN.
-- Owner PDFs remain attached to internal email; applicants receive a plain confirmation.
-- Contact-form submissions are no longer written to application logs.
-- `npm run test:application`, `npm run lint`, and `npx tsc --noEmit --incremental false` pass.
+- Quick Application accepts a new submission after 90 full days, preserves completed history, and keeps same-request delivery retries idempotent.
+- Full Application is invitation-only and requires email OTP before personal data, prefill, or drafts are returned. Full SSN is never collected online.
+- Full Application autosaves validated answers to private Blob storage with version checks and restores them on a valid verified invitation. A daily Vercel Cron route deletes drafts after the original invitation expiration plus 30 days.
+- A driver can edit a signed Full Application during the valid invitation period. Changes remain an unsigned autosaved draft until the driver signs again; the signed revision PDF is immutable, numbered, and emailed once to the owner with a plain applicant receipt.
+- Screening invitations are issued manually, expire after 14 days, and replacements revoke the previous link. Full invitations require signed Screening consent. Screening consent records are immutable; replacement consent is a separate record.
+- Single-admin passwordless sign-in, session-protected application lists/details, invitation expiry and revocation controls, and private PDF downloads for Quick, Screening, original Full, latest Full, and numbered revisions are implemented.
+- Screening includes MVR/PSP, limited-query disclosure gating, the official Clearinghouse full-query caveat, typed acknowledgments, and private consent PDF delivery. No external report or Clearinghouse query is ordered by this site.
+- README documents operations and environment variable names. Synthetic Quick, Screening, Full, and Full Revision 1 PDFs are generated under `/private/tmp/moontera-application-qa` and are not tracked.
 
-## Not complete; do not treat this branch as production-ready
+## Verification
 
-- `/apply` remains public. There is no invitation validation, email OTP, private draft autosave, revision/signature workflow, or secure admin dashboard.
-- `/driver-screening` and screening invitation/consent/PDF routes are absent.
-- Existing application schema still contains the Clearinghouse/SMS/last-test fields that the specification says to relocate or remove. Revised driving-experience and prior-employer authorization layouts are not implemented.
-- Legal review is still required for Clearinghouse limited-query consent scope and the proposed prior-employer drug/alcohol authorization. No new consent language should be represented as approved.
-- Vercel project access returned 403 for the configured team, so deployment configuration and environment cannot be verified from this session. The Vercel CLI is unavailable here.
-- The specification requires a commercial-use hosting plan review before release; no plan change or paid upgrade is authorized.
-- Owner acceptance testing and release approval are outstanding.
+- `npm run test:application` — passed, including validation, Quick retry/90-day behavior, draft sanitization, PDF generation, and synthetic form PDFs.
+- `npm run lint` — passed.
+- `npx tsc --noEmit --incremental false` — passed.
+- `npm run build` — passed with Next.js 16.2.4 after the sandbox granted build-output access.
+- Local smoke test: public `/apply`, `/admin`, and `/driver-screening` return 200; unauthenticated Full session and admin application APIs return 401.
+- Synthetic Full and Screening PDF pages were rendered and visually reviewed. No live Resend, Blob, or driver-data end-to-end acceptance run was performed.
 
-## Release sequence
+## Release blockers
 
-1. Implement and test the invitation, verification, screening, and private admin workflows.
-2. Obtain owner/legal approval for operative consent language and retention rules.
-3. Reconnect Vercel with access to the `moontera-web` project; confirm commercial-use plan and production environment variables without exposing secret values.
-4. Run production-like acceptance tests, then deploy and verify the live driver and owner flows.
+- **Legal/compliance:** a qualified reviewer and owner must approve exact Clearinghouse limited-query language and period, the prior-employer authorization language, the screening/full forms, and retention/deletion policy. Screening submission remains blocked unless the explicit approval environment settings are configured.
+- **Hosting:** verify the commercial-use plan and data-processing posture. Vercel's current terms restrict Hobby to personal/non-commercial use; a paid plan may cost money and no upgrade is authorized. The Vercel project listing works, but project inspection, deployment listing, and environment metadata requests return 403 for scope `moontera-web-s-projects`; no Vercel CLI is installed here.
+- **Email:** verify Resend's `moonterallc.com` sending domain and production configuration before real messages are sent.
+- **Owner acceptance:** test with synthetic records and confirm owner receipt PDFs, driver receipts, screening approval gate, OTP, draft resumption, and signed revision delivery.
+- **Repository release:** not pushed and no PR created yet. Production was not deployed. The spec requires owner go-ahead after the review and acceptance gates; “deploy” does not waive those open compliance and hosting gates.
+
+## Next release sequence
+
+1. Owner obtains legal review and supplies the approved Clearinghouse consent text/period; decide signed-record retention.
+2. Owner confirms hosting plan and Resend domain/configuration.
+3. Restore Vercel project scope access, run production-like acceptance tests, and review generated synthetic PDFs.
+4. Push this feature branch, open a PR, and obtain the required owner release approval before production deployment.

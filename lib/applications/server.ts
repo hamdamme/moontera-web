@@ -65,6 +65,7 @@ function reply(body: unknown, status = 200) {
 export async function handleApplication(
   request: Request,
   kind: "quick" | "full",
+  verifiedEmail?: string,
 ) {
   try {
     const origin = request.headers.get("origin");
@@ -112,6 +113,14 @@ export async function handleApplication(
       throw new InputError("Invalid application data.");
     }
     const payload = validateSubmission(kind, input);
+    if (
+      kind === "full" &&
+      (!verifiedEmail || payload.email !== verifiedEmail.trim().toLowerCase())
+    )
+      return reply(
+        { success: false, message: "Verify the invitation email before submitting." },
+        403,
+      );
     if (
       !process.env.RESEND_API_KEY ||
       !process.env.BLOB_READ_WRITE_TOKEN ||

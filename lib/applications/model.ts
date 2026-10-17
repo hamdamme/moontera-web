@@ -104,6 +104,81 @@ function text(x: unknown, max = 300, required = false): string {
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
+
+export function sanitizeDraftAnswers(input: unknown, verifiedEmail: string): Answers {
+  const body = object(input);
+  const rawAnswers = object(body.answers);
+  const email = normalizeEmail(verifiedEmail);
+  if (email.length > 254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email))
+    throw new InputError("Verified invitation email is invalid.");
+  const answers = initialAnswers();
+  for (const group of steps.flatMap((step) => step.groups)) {
+    const provided = rawAnswers[group.key];
+    let rows: unknown[];
+    if (group.fixedRows) {
+      if (!Array.isArray(provided) || provided.length !== group.fixedRows.length)
+        throw new InputError(`Invalid ${group.title.toLowerCase()} rows.`);
+      rows = provided;
+    } else if (group.repeat) {
+      if (provided === undefined) rows = answers[group.key];
+      else if (!Array.isArray(provided) || provided.length > 30 || provided.length < (group.minimum || 0))
+        throw new InputError(`Invalid ${group.title.toLowerCase()} rows.`);
+      else rows = provided;
+    } else {
+      if (provided === undefined) rows = [{}];
+      else if (!Array.isArray(provided) || provided.length !== 1)
+        throw new InputError(`Invalid ${group.title.toLowerCase()} fields.`);
+      else rows = provided;
+    }
+    answers[group.key] = rows.map((value, index) => {
+      const row = object(value);
+      const cleaned: Record<string, string> = group.fixedRows
+        ? { equipment: group.fixedRows[index] }
+        : {};
+      for (const field of group.fields) {
+        cleaned[field.key] = text(
+          row[field.key],
+          field.type === "textarea" ? 4000 : field.key === "email" ? 254 : 300,
+        );
+        if (field.options && cleaned[field.key] && !field.options.includes(cleaned[field.key]))
+          throw new InputError("Choose a valid option.");
+      }
+      for (const field of group.fields)
+        if (!visible(field, cleaned)) delete cleaned[field.key];
+      return cleaned;
+    });
+  }
+  const draftEmail = answers.personal[0]?.email;
+  if (draftEmail && normalizeEmail(draftEmail) !== email)
+    throw new InputError("The verified invitation email cannot be changed in this application.");
+  answers.personal[0].email = email;
+  for (let stepIndex = 0; stepIndex < steps.length; stepIndex++) {
+    for (const group of steps[stepIndex].groups) {
+      for (const [index, row] of answers[group.key].entries()) {
+        for (const field of group.fields) {
+          if (!visible(field, row)) continue;
+          const value = row[field.key]?.trim() || "";
+          if (!value) continue;
+          if (field.type === "email" && !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(value))
+            throw new InputError("Enter a valid email address.");
+          if (field.type === "phone" && !/^\d{3}-\d{3}-\d{4}$/.test(value))
+            throw new InputError("Enter a 10-digit phone number.");
+          if (field.type === "number" && !/^\d{1,9}$/.test(value))
+            throw new InputError("Enter a whole number using digits only.");
+          if (field.type === "date" || field.type === "month") {
+            const date = dateKey(value, field.type === "month");
+            if (!date) throw new InputError(`Enter a valid ${field.type === "month" ? "month" : "date"}.`);
+            if (field.past && date > new Date().toISOString().slice(0, 10))
+              throw new InputError("This date cannot be in the future.");
+          }
+        }
+        if (index > 30) throw new InputError("Too many records.");
+      }
+    }
+  }
+  return answers;
+}
+
 export function validateSubmission(
   kind: "quick" | "full",
   input: unknown,
@@ -173,13 +248,17 @@ export function validateSubmission(
       const rows = raw[group.key];
       if (
         !Array.isArray(rows) ||
-        rows.length > (group.repeat ? 30 : 1) ||
-        rows.length < (group.repeat ? group.minimum || 0 : 1)
+        (group.fixedRows
+          ? rows.length !== group.fixedRows.length
+          : rows.length > (group.repeat ? 30 : 1) ||
+            rows.length < (group.repeat ? group.minimum || 0 : 1))
       )
         throw new InputError(`Complete ${group.title.toLowerCase()}.`);
-      answers[group.key] = rows.map((value) => {
+      answers[group.key] = rows.map((value, index) => {
         const row = object(value),
-          cleaned: Record<string, string> = {};
+          cleaned: Record<string, string> = group.fixedRows
+            ? { equipment: group.fixedRows[index] }
+            : {};
         for (const field of group.fields)
           cleaned[field.key] = text(
             row[field.key],
