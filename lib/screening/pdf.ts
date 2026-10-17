@@ -4,8 +4,8 @@ import documents from "@/app/apply/documents/documents.json";
 export type ScreeningRecord = {
   id: string; createdAt: string;
   driver: { email: string; name: string; testDate?: string };
-  consents: { mvr: { signedBy: string; signedAt: string }; psp: { signedBy: string; signedAt: string } };
-  certification: { signedBy: string; at: string };
+  consents: { mvr: { signedBy: string; signedAt: string }; psp: { signedBy: string; signedAt: string }; clearinghouse?: { signedBy: string; signedAt: string; confirmed: boolean } };
+  certification: { signedBy: string; at: string; date?: string };
 };
 
 export async function createScreeningPdf(record: ScreeningRecord): Promise<Uint8Array> {
@@ -42,12 +42,14 @@ export async function createScreeningPdf(record: ScreeningRecord): Promise<Uint8
     }
     y-=title?5:7;
   };
-  write("MOONTERA LLC | DRIVER SCREENING",true);
+  write("MOONTERA LLC",true);
+  write("SCREENING CONSENTS",true);
+  write("30 Copperwood Dr, Buffalo Grove, IL 60089");
+  write("773-882-5595 | info@moonterallc.com");
   write("Reference: " + record.id);
   write("Submitted (UTC): " + record.createdAt);
   write("Driver: " + record.driver.name);
   write("Email: " + record.driver.email);
-  write("Last DOT drug test: " + (record.driver.testDate || "Not provided"));
   for (const kind of ["mvr","psp"] as const) {
     write(kind==="mvr"?"MOTOR VEHICLE RECORD AUTHORIZATION":"FMCSA PSP DISCLOSURE AND AUTHORIZATION",true);
     const doc = documents.find(x=>x.id===kind);
@@ -56,10 +58,17 @@ export async function createScreeningPdf(record: ScreeningRecord): Promise<Uint8
     write("Typed signature: " + record.consents[kind].signedBy);
     write("Signed (UTC): " + record.consents[kind].signedAt);
   }
+  write("FMCSA CLEARINGHOUSE ACKNOWLEDGMENT",true);
+  write("A required pre-employment full query must be authorized electronically through the official FMCSA Clearinghouse after Moontera LLC submits the request. This PDF does not replace that consent.");
+  write("Acknowledgment accepted: " + (record.consents.clearinghouse?.confirmed ? "Yes" : "Not recorded"));
+  write("Typed full legal name: " + (record.consents.clearinghouse?.signedBy || "Not recorded"));
   write("CERTIFICATION",true);
-  write("I certify the information submitted is accurate to the best of my knowledge. The MVR and PSP authorizations were separately acknowledged and signed.");
+  write("I certify that all information in this driver screening form is true, complete, and accurate to the best of my knowledge. I have reviewed the applicable disclosures, authorizations, and acknowledgments above. I understand that FMCSA full-query consent must be provided separately through the official Clearinghouse.");
   write("Typed signature: " + record.certification.signedBy);
+  write("Certification date: " + (record.certification.date || record.certification.at.slice(0,10)));
   write("Certified (UTC): " + record.certification.at);
   write("FMCSA Clearinghouse full queries require separate electronic consent in the official FMCSA Clearinghouse. This document is not full-query consent.");
+  pdf.getPages().forEach((p,i)=>{p.drawLine({start:{x:48,y:44},end:{x:564,y:44},color:rgb(.78,.83,.89),thickness:.6});p.drawText("MOONTERA LLC  |  SCREENING CONSENTS",{x:49,y:30,font,size:8,color:rgb(.36,.43,.52)});p.drawText(`${i+1} / ${pdf.getPageCount()}`,{x:530,y:30,font,size:8});});
+  pdf.setTitle("Screening Consents - "+record.driver.name);
   return pdf.save();
 }

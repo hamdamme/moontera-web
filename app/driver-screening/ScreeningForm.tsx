@@ -11,6 +11,8 @@ export default function ScreeningForm() {
   const [email, setEmail] = useState("");
   const [mvrAgree, setMvrAgree] = useState(false);
   const [pspAgree, setPspAgree] = useState(false);
+  const [clearingAgree, setClearingAgree] = useState(false);
+  const [clearingName, setClearingName] = useState("");
   const [screeningName, setScreeningName] = useState("");
   const [mvrName, setMvrName] = useState("");
   const [pspName, setPspName] = useState("");
@@ -45,18 +47,16 @@ export default function ScreeningForm() {
   return <main className="screening-shell">
     <header className="screening-header"><strong>MOONTERA LLC</strong><span>DRIVER SCREENING</span></header>
     <div className="screening-intro"><h1>Driver Screening</h1>
-      <p>Enter your last DOT drug test date and review the MVR and PSP authorizations.</p>
+      <p>Review and sign the MVR and PSP authorizations and FMCSA Clearinghouse acknowledgment.</p>
       <p className="screening-note">Screening does not guarantee employment. No background reports or drug tests are automatically ordered when you submit this form.</p>
     </div>
     <form onSubmit={submit}>
       <div className="screening-honeypot" aria-hidden="true"><label>Leave this blank<input type="text" name="website" tabIndex={-1} autoComplete="off"/></label></div>
-      <section className="screening-card"><h2>1. Last DOT drug test</h2>
-        <p>Enter the date of your most recent DOT drug test. Leave blank if you do not know the date or have never been tested.</p>
+      <section className="screening-card"><h2>1. Driver identification</h2>
+        <p>Your email address is used to identify your screening record.</p>
         <div className="screening-grid">
           <label>Email address *<input name="email" required value={email} onChange={e=>setEmail(e.target.value)} type="email" autoComplete="email" maxLength={254}/></label>
-          <label>Last DOT drug test date<input name="testDate" type="date" max={today}/></label>
         </div>
-        <p className="screening-note">Moontera LLC will arrange any required pre-employment drug test separately.</p>
       </section>
       <section className="screening-card"><h2>2. Motor Vehicle Record (MVR) authorization</h2>
         <p className="screening-note">MVR checks are performed through MVRcheck.com.</p>
@@ -73,11 +73,16 @@ export default function ScreeningForm() {
         <p>A required pre-employment full query must be authorized electronically by the driver in the official FMCSA Clearinghouse after Moontera LLC submits the query request.</p>
         <p><a href="https://clearinghouse.fmcsa.dot.gov/" target="_blank" rel="noopener noreferrer">Open FMCSA Clearinghouse ↗</a></p>
         <p className="screening-note">This page does not grant full-query consent. Complete the separate FMCSA request when it appears in your Clearinghouse account.</p>
+        <p>I authorize Moontera LLC to conduct permitted FMCSA Drug &amp; Alcohol Clearinghouse limited queries, subject to applicable requirements and the consent period specified by Moontera.</p>
+        <p>I understand that a required pre-employment full query requires my separate electronic consent in the official FMCSA Clearinghouse. Failure to provide the required consent may prevent me from performing safety-sensitive driving duties.</p>
+        <label className="screening-checkbox"><input type="checkbox" name="clearinghouseConsent" value="yes" checked={clearingAgree} onChange={e=>setClearingAgree(e.target.checked)} required/>I have read and acknowledge the Clearinghouse information above.</label>
+        <label>Typed full legal name for Clearinghouse acknowledgment *<input name="clearinghouseSignature" required value={clearingName} onChange={e=>setClearingName(e.target.value)} maxLength={120}/></label>
       </section>
       <section className="screening-card"><h2>5. Certification</h2>
-        <p>I certify that the information I provided is accurate to the best of my knowledge. The MVR and PSP authorizations above are separately acknowledged and signed.</p>
+        <p>I certify that all information in this driver screening form is true, complete, and accurate to the best of my knowledge. I have reviewed the applicable disclosures, authorizations, and acknowledgments above. I understand that FMCSA full-query consent must be provided separately through the official Clearinghouse.</p>
         <label>Full legal name / final certification *<input name="certificationSignature" required value={screeningName} onChange={e=>setScreeningName(e.target.value)} maxLength={120}/></label>
-        <label className="screening-checkbox"><input type="checkbox" name="certified" value="yes" required/>I confirm the information and MVR and PSP authorizations provided above.</label>
+        <label>Certification date *<input name="certificationDate" type="date" required defaultValue={today} max={today}/></label>
+        <label className="screening-checkbox"><input type="checkbox" name="certified" value="yes" required/>I confirm the information and authorizations provided above.</label>
         <p className="screening-note">Electronic signatures and consent records will be stored privately. Review the <a href="/privacy-policy" target="_blank" rel="noreferrer">Privacy Policy</a> before submitting.</p>
       </section>
       {message && <p role="alert" className="screening-error">{message}</p>}

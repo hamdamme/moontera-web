@@ -2,3 +2,8 @@
 .screening-honeypot{position:absolute!important;left:-9999px!important;width:1px!important;height:1px!important;overflow:hidden!important}
 
 .screening-admin-toolbar{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin:20px 0}.screening-admin-toolbar label{flex:1;min-width:180px}.screening-admin-toolbar button,.screening-admin-actions button{border:1px solid #bdc9d8;border-radius:7px;background:white;padding:10px 16px;min-height:44px;color:#19334f;cursor:pointer}.screening-admin-toolbar button:disabled,.screening-admin-actions button:disabled{opacity:.5;cursor:wait}.screening-admin-entry{padding:18px 0;border-top:1px solid #dae1ea}.screening-admin-entry h2{margin:0 0 8px;font-size:18px}.screening-admin-entry p{margin:5px 0;font-size:13px;overflow-wrap:anywhere}.screening-admin-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.screening-admin-actions button:first-child{background:#215aca;color:white;border-color:#215aca}
+
+/* Readable legal text, preserving disclosure wording. */
+.screening-legal{white-space:normal;max-width:70ch;}
+.screening-legal p{line-height:1.7;margin:0 0 1em;text-align:left;overflow-wrap:break-word;white-space:pre-line;}
+.screening-legal h3{line-height:1.45;margin-top:1.4em;}

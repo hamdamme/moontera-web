@@ -62,25 +62,25 @@ export async function POST(request: Request) {
     const email = val(raw,"email",254).toLowerCase();
     if (!/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)) throw new Invalid("Enter a valid email address.");
     if (raw.website) return respond({success:true,reference:"received"});
-    const testDate = date(raw, "testDate", false);
-    if (testDate && testDate > new Date().toISOString().slice(0, 10))
-      throw new Invalid("Last DOT drug test cannot be in the future.");
     const mvrSignature=val(raw,"mvrSignature",120),pspSignature=val(raw,"pspSignature",120),
-      certificationSignature=val(raw,"certificationSignature",120);
+      clearingSignature=val(raw,"clearinghouseSignature",120),certificationSignature=val(raw,"certificationSignature",120);
+    const certificationDate=date(raw,"certificationDate");
+    if(certificationDate>new Date().toISOString().slice(0,10)) throw new Invalid("Certification date cannot be in the future.");
     const name = certificationSignature;
-    if (raw.mvrConsent !== "yes" || raw.pspConsent !== "yes")
+    if (raw.mvrConsent !== "yes" || raw.pspConsent !== "yes" || raw.clearinghouseConsent !== "yes")
       throw new Invalid("Review and agree to the MVR and PSP authorizations.");
     if (raw.certified !== "yes") throw new Invalid("Please accept the certification.");
     const key=publicScreeningKey(email);
     const id=randomUUID(),createdAt=new Date().toISOString();
     const record={
       id,createdAt,
-      driver:{email,name,testDate},
+      driver:{email,name},
       consents:{
         mvr:{signedBy:mvrSignature,confirmed:true,version:consentVersion("mvr"),signedAt:createdAt},
         psp:{signedBy:pspSignature,confirmed:true,version:consentVersion("psp"),signedAt:createdAt},
+        clearinghouse:{signedBy:clearingSignature,confirmed:true,signedAt:createdAt},
       },
-      certification:{signedBy:certificationSignature,at:createdAt},
+      certification:{signedBy:certificationSignature,date:certificationDate,at:createdAt},
       notification:"not-guaranteed",
     };
     try{
