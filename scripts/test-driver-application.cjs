@@ -18,6 +18,7 @@ execFileSync(
     "lib/applications/workflow.ts",
     "lib/applications/submission-pdf.ts",
     "lib/applications/origin.ts",
+    "lib/http/read-json-body.ts",
     "lib/screening/pdf.ts",
     "lib/onboarding/draft-lifecycle.ts",
     "lib/screening/disclosure-approval.ts",
@@ -40,6 +41,9 @@ const { processSubmission } = require(
 );
 const { isAllowedApplicationOrigin } = require(
   path.join(tmp, "lib/applications/origin.js"),
+);
+const { JsonBodyError, readJsonBody } = require(
+  path.join(tmp, "lib/http/read-json-body.js"),
 );
 const { createSubmissionPdf } = require(
   path.join(tmp, "lib/applications/submission-pdf.js"),
@@ -278,6 +282,41 @@ const deps = {
   },
 };
 (async () => {
+  const validJsonRequest = new Request("https://example.test", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token: "synthetic" }),
+  });
+  assert.deepEqual(await readJsonBody(validJsonRequest, 4096), { token: "synthetic" });
+  await assert.rejects(
+    readJsonBody(
+      new Request("https://example.test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: "x".repeat(5000) }),
+      }),
+      4096,
+    ),
+    (error) => error instanceof JsonBodyError && error.status === 413,
+  );
+  await assert.rejects(
+    readJsonBody(
+      new Request("https://example.test", { method: "POST", body: "{}" }),
+      4096,
+    ),
+    (error) => error instanceof JsonBodyError && error.status === 415,
+  );
+  await assert.rejects(
+    readJsonBody(
+      new Request("https://example.test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "not-json",
+      }),
+      4096,
+    ),
+    (error) => error instanceof JsonBodyError && error.status === 400,
+  );
   const first = await processSubmission("quick", quick, deps);
   assert(first.id);
   await processSubmission("quick", quick, deps);
@@ -420,6 +459,6 @@ const deps = {
   fs.writeFileSync(path.join(out, "Moontera-screening-sample.pdf"), screeningPdf);
   assert(screeningPdf.length > 1000 && revisedPdf.length > 1000);
   console.log(
-    "PASS: validation, request origins, missing groups, date checks, email normalization, screening release gate, draft retention deadlines, concurrent duplicate prevention, repeat requests, partial email retry, timeout cutoff, and formatted PDFs.",
+    "PASS: bounded JSON bodies, validation, request origins, missing groups, date checks, email normalization, screening release gate, draft retention deadlines, concurrent duplicate prevention, repeat requests, partial email retry, timeout cutoff, and formatted PDFs.",
   );
 })().finally(() => fs.rmSync(tmp, { recursive: true, force: true }));

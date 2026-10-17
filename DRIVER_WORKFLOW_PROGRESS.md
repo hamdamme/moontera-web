@@ -7,6 +7,7 @@ Updated 2026-10-17 on `codex/quick-90-day-reapply`.
 - Quick Application accepts a new submission after 90 full days, preserves completed history, and keeps same-request delivery retries idempotent.
 - Quick and Full submission intake applies a shared-network attempt limit; stored rate-limit keys are HMAC digests and expire automatically.
 - Public Quick and Full submissions reject missing, mismatched, or malformed request origins; production domains and same-origin preview/local requests are covered by tests.
+- Passwordless admin, Full OTP, Screening invitation, and admin action APIs parse JSON through streamed byte limits instead of unbounded `request.json()` reads.
 - Full Application is invitation-only and requires email OTP before personal data, prefill, or drafts are returned. Full SSN is never collected online. A retained draft keeps the original invitation's expiry-plus-30-day deletion deadline across replacement invitations.
 - Full Application autosaves validated answers to private Blob storage with version checks and restores them on a valid verified invitation. A daily Vercel Cron route deletes drafts after the original invitation expiration plus 30 days and removes expired invitation/authentication artifacts.
 - A driver can edit a signed Full Application during the valid invitation period. Changes remain an unsigned autosaved draft until the driver signs again; the signed revision PDF is immutable, numbered, and emailed once to the owner with a plain applicant receipt.
@@ -17,7 +18,7 @@ Updated 2026-10-17 on `codex/quick-90-day-reapply`.
 
 ## Verification
 
-- `npm run test:application` — passed, including validation, request-origin checks, Quick retry/90-day behavior, draft sanitization and fixed retention deadlines across replacement invites, screening release-gate conditions, PDF generation, and synthetic form PDFs.
+- `npm run test:application` — passed, including bounded JSON-body parsing, validation, request-origin checks, Quick retry/90-day behavior, draft sanitization and fixed retention deadlines across replacement invites, screening release-gate conditions, PDF generation, and synthetic form PDFs.
 - `npm run lint` — passed.
 - `npx tsc --noEmit --incremental false` — passed.
 - `npm run build` — passed with Next.js 16.2.4 after the sandbox granted build-output access.

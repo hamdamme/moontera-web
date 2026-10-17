@@ -1,5 +1,6 @@
 import { readActiveInvitation } from "@/lib/onboarding/invitations";
 import { validAdminOrigin } from "@/lib/onboarding/admin-auth";
+import { JsonBodyError, readJsonBody } from "@/lib/http/read-json-body";
 
 export const runtime = "nodejs";
 
@@ -7,7 +8,7 @@ export async function POST(request: Request) {
   if (!validAdminOrigin(request))
     return Response.json({ message: "Invalid request origin." }, { status: 403 });
   try {
-    const body = await request.json();
+    const body = await readJsonBody(request, 4096);
     const token = typeof body?.token === "string" ? body.token : "";
     const invitation = await readActiveInvitation(token, "screening");
     if (!invitation)
@@ -21,7 +22,12 @@ export async function POST(request: Request) {
       },
       { headers: { "Cache-Control": "no-store" } },
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof JsonBodyError)
+      return Response.json(
+        { message: error.message },
+        { status: error.status, headers: { "Cache-Control": "no-store" } },
+      );
     return Response.json({ message: "The invitation could not be checked." }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
 }

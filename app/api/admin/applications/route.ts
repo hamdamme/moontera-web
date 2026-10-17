@@ -4,6 +4,7 @@ import { findQuickRecord, listApplicationRecords, toApplicationSummary } from "@
 import { activeInvitationStatus, issueInvitation, revokeInvitation, type InvitationPurpose } from "@/lib/onboarding/invitations";
 import { readPrivate } from "@/lib/onboarding/private-store";
 import type { RecordData } from "@/lib/applications/workflow";
+import { JsonBodyError, readJsonBody } from "@/lib/http/read-json-body";
 
 export const runtime = "nodejs";
 
@@ -58,22 +59,28 @@ export async function POST(request: Request) {
   try {
     if (!(await getAdminSession(request)))
       return Response.json({ message: "Sign in required." }, { status: 401, headers: { "Cache-Control": "no-store" } });
-    const body = await request.json();
+    const body = await readJsonBody(request, 8192);
     if (body?.action === "revoke-invitation") {
-      const purpose: InvitationPurpose = body.purpose;
-      if (typeof body.quickId !== "string" || !/^[a-f0-9-]{36}$/i.test(body.quickId) || !["screening", "full"].includes(purpose))
+      const purposeValue = body.purpose;
+      if (
+        typeof body.quickId !== "string" ||
+        !/^[a-f0-9-]{36}$/i.test(body.quickId) ||
+        !["screening", "full"].includes(purposeValue as string)
+      )
         return Response.json({ message: "Invalid invitation request." }, { status: 400 });
+      const purpose = purposeValue as InvitationPurpose;
       const revoked = await revokeInvitation(body.quickId, purpose);
       return Response.json({ success: true, revoked }, { headers: { "Cache-Control": "no-store" } });
     }
     if (body?.action === "invite") {
-      const purpose: InvitationPurpose = body.purpose;
+      const purposeValue = body.purpose;
       if (
         typeof body.quickId !== "string" ||
         !/^[a-f0-9-]{36}$/i.test(body.quickId) ||
-        !["screening", "full"].includes(purpose)
+        !["screening", "full"].includes(purposeValue as string)
       )
         return Response.json({ message: "Invalid invitation request." }, { status: 400 });
+      const purpose = purposeValue as InvitationPurpose;
       try {
         const result = await issueInvitation(body.quickId, purpose);
         return Response.json({ success: true, ...result }, { headers: { "Cache-Control": "no-store" } });
@@ -108,7 +115,12 @@ export async function POST(request: Request) {
       },
       { headers: { "Cache-Control": "no-store" } },
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof JsonBodyError)
+      return Response.json(
+        { message: error.message },
+        { status: error.status, headers: { "Cache-Control": "no-store" } },
+      );
     return Response.json(
       { message: "Application could not be opened." },
       { status: 503, headers: { "Cache-Control": "no-store" } },
