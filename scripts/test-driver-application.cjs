@@ -46,16 +46,51 @@ const raw = {
   quick: {
     full_name: "Alex Example",
     address: "100 Example Street",
-    city_state_zip: "Chicago, IL 60601",
+    city: "Chicago",
+    state: "IL",
+    zip: "60601",
     dob: "1990-05-15",
     phone: "773-555-0123",
     email: "ALEX@example.com",
     position: "Company driver",
     start_date: "2026-11-01",
+    cdl_number: "EXAMPLE123",
+    cdl_state: "IL",
+    cdl_class: "Class A",
+    cdl_expiration: "2028-06-30",
+    medical_card_issue: "2026-01-01",
+    medical_card_expiration: "2028-01-01",
+    drug_test_status: "No",
+    drug_test_date: "",
+    ssn_last4: "1234",
   },
 };
 const quick = validateSubmission("quick", raw);
 assert.equal(quick.email, "alex@example.com");
+assert.equal(quick.quick.ssn_last4, "1234");
+assert.throws(() =>
+  validateSubmission("quick", {
+    ...raw,
+    quick: { ...raw.quick, ssn_last4: "123" },
+  }),
+);
+assert.throws(() =>
+  validateSubmission("quick", {
+    ...raw,
+    quick: { ...raw.quick, drug_test_status: "Yes", drug_test_date: "" },
+  }),
+);
+assert.equal(
+  validateSubmission("quick", {
+    ...raw,
+    quick: {
+      ...raw.quick,
+      drug_test_status: "Yes",
+      drug_test_date: "2026-02-01",
+    },
+  }).quick.drug_test_date,
+  "2026-02-01",
+);
 assert.throws(() =>
   validateSubmission("quick", {
     ...raw,

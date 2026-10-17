@@ -5,16 +5,25 @@ import {
   validateStep,
   dateKey,
   type Answers,
+  states,
 } from "../../app/apply/schema";
-export const quickFields = [
-  { key: "full_name", label: "Full name", type: "text", required: true },
+export type QuickField = {
+  key: string;
+  label: string;
+  type: "text" | "email" | "tel" | "date" | "select";
+  required?: boolean;
+  maxLength?: number;
+  options?: string[];
+  pattern?: string;
+  inputMode?: "numeric";
+  when?: [string, string];
+};
+export const quickFields: QuickField[] = [
+  { key: "full_name", label: "Full legal name", type: "text", required: true },
   { key: "address", label: "Street address", type: "text", required: true },
-  {
-    key: "city_state_zip",
-    label: "City / State / ZIP",
-    type: "text",
-    required: true,
-  },
+  { key: "city", label: "City", type: "text", required: true },
+  { key: "state", label: "State", type: "select", required: true, options: states },
+  { key: "zip", label: "ZIP code", type: "text", required: true, maxLength: 10 },
   { key: "dob", label: "Date of birth", type: "date", required: true },
   { key: "phone", label: "Phone number", type: "tel", required: true },
   { key: "email", label: "Email address", type: "email", required: true },
@@ -23,14 +32,38 @@ export const quickFields = [
     label: "Position applied for",
     type: "select",
     required: true,
+    options: ["Company driver", "Owner operator", "Lease driver", "Other"],
+  },
+  { key: "start_date", label: "Available start date", type: "date", required: true },
+  { key: "cdl_number", label: "CDL number", type: "text", required: true },
+  { key: "cdl_state", label: "CDL issuing state", type: "select", required: true, options: states },
+  { key: "cdl_class", label: "CDL class", type: "select", required: true, options: ["Class A", "Class B", "Class C", "Other"] },
+  { key: "cdl_expiration", label: "CDL expiration date", type: "date", required: true },
+  { key: "medical_card_issue", label: "DOT medical card issue date", type: "date", required: true },
+  { key: "medical_card_expiration", label: "DOT medical card expiration date", type: "date", required: true },
+  {
+    key: "drug_test_status",
+    label: "Have you previously completed a DOT drug and alcohol test?",
+    type: "select",
+    required: true,
+    options: ["Yes", "No"],
   },
   {
-    key: "start_date",
-    label: "Available start date",
+    key: "drug_test_date",
+    label: "Date of your most recent DOT drug and alcohol test",
     type: "date",
     required: true,
+    when: ["drug_test_status", "Yes"],
   },
-] as const;
+  {
+    key: "ssn_last4",
+    label: "Last four digits of SSN (optional)",
+    type: "text",
+    maxLength: 4,
+    pattern: "[0-9]{4}",
+    inputMode: "numeric",
+  },
+];
 export const positions = [
   "Company driver",
   "Owner operator",
@@ -87,15 +120,30 @@ export function validateSubmission(
   if (kind === "quick") {
     const raw = object(body.quick),
       quick: Record<string, string> = {};
-    for (const field of quickFields)
+    for (const field of quickFields) {
+      const required =
+        field.required &&
+        (!field.when || raw[field.when[0]] === field.when[1]);
       quick[field.key] = text(
         raw[field.key],
-        field.key === "email" ? 254 : 300,
-        true,
+        field.maxLength || (field.key === "email" ? 254 : 300),
+        !!required,
       );
+      if (field.when && raw[field.when[0]] !== field.when[1])
+        quick[field.key] = "";
+      if (field.options && quick[field.key] && !field.options.includes(quick[field.key]))
+        throw new InputError("Choose a valid option.");
+    }
     if (!positions.includes(quick.position))
       throw new InputError("Choose a valid position.");
-    for (const key of ["dob", "start_date"]) {
+    for (const key of [
+      "dob",
+      "start_date",
+      "cdl_expiration",
+      "medical_card_issue",
+      "medical_card_expiration",
+      ...(quick.drug_test_status === "Yes" ? ["drug_test_date"] : []),
+    ]) {
       const v = quick[key];
       if (
         !/^\d{4}-\d{2}-\d{2}$/.test(v) ||
@@ -107,6 +155,8 @@ export function validateSubmission(
       throw new InputError("Date of birth cannot be in the future.");
     if (!/^\+?1?\d{10}$/.test(quick.phone.replace(/[\s().-]/g, "")))
       throw new InputError("Enter a valid phone number.");
+    if (quick.ssn_last4 && !/^\d{4}$/.test(quick.ssn_last4))
+      throw new InputError("Enter exactly four digits for the optional SSN field.");
     result = {
       kind,
       requestId,

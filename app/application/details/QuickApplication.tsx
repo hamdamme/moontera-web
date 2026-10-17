@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState, type FormEvent } from "react";
-import { quickFields, positions } from "@/lib/applications/model";
+import { quickFields } from "@/lib/applications/model";
 import { submissionId } from "@/lib/applications/client";
 import "../../apply/application.css";
 
@@ -8,7 +8,8 @@ export default function QuickApplication() {
   const [busy, setBusy] = useState(false),
     [pendingSubmission, setPendingSubmission] = useState(false),
     [message, setMessage] = useState(""),
-    [receipt, setReceipt] = useState("");
+    [receipt, setReceipt] = useState(""),
+    [drugTestStatus, setDrugTestStatus] = useState("");
   const sending = useRef(false);
   const pending = useRef<Record<string, unknown> | null>(null);
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -96,27 +97,36 @@ export default function QuickApplication() {
               <div className="apply-card">
                 <h2>General information</h2>
                 <p className="apply-card-description">
-                  All fields are required. No Social Security number is
-                  requested.
+                  Complete the required fields. We never ask for your full
+                  Social Security number; the last four digits are optional.
                 </p>
                 <fieldset
                   disabled={busy || pendingSubmission}
                   style={{ border: 0, padding: 0, margin: 0 }}
                 >
                   <div className="apply-grid">
-                    {quickFields.map((field) => (
+                    {quickFields
+                      .filter((field) => !field.when || drugTestStatus === field.when[1])
+                      .map((field) => (
                       <div className="apply-field" key={field.key}>
-                        <label htmlFor={field.key}>{field.label} *</label>
+                        <label htmlFor={field.key}>
+                          {field.label}{field.required ? " *" : ""}
+                        </label>
                         {field.type === "select" ? (
                           <select
                             id={field.key}
                             name={field.key}
-                            required
+                            required={!!field.required}
                             defaultValue=""
+                            onChange={
+                              field.key === "drug_test_status"
+                                ? (event) => setDrugTestStatus(event.target.value)
+                                : undefined
+                            }
                           >
-                            <option value="">Select a position</option>
-                            {positions.map((p) => (
-                              <option key={p}>{p}</option>
+                            <option value="">Select an option</option>
+                            {field.options?.map((option) => (
+                              <option key={option}>{option}</option>
                             ))}
                           </select>
                         ) : (
@@ -124,8 +134,10 @@ export default function QuickApplication() {
                             id={field.key}
                             name={field.key}
                             type={field.type}
-                            required
-                            maxLength={field.type === "email" ? 254 : 300}
+                            required={!!field.required}
+                            maxLength={field.maxLength ?? (field.type === "email" ? 254 : 300)}
+                            pattern={field.pattern}
+                            inputMode={field.inputMode}
                             max={
                               field.key === "dob"
                                 ? new Date().toISOString().slice(0, 10)
