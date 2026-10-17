@@ -1,3 +1,4 @@
+
 import { PDFDocument, rgb, type PDFPage, type PDFEmbeddedPage } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { steps, visible, certification } from "../../app/apply/schema";

@@ -1,3 +1,4 @@
+
 import { createHash, randomUUID } from "node:crypto";
 import type { Submission } from "./model";
 export type RecordData = {
@@ -13,6 +14,7 @@ export type RecordData = {
   complete: boolean;
   completedAt?: string;
   deletedAt?: string;
+  sourceQuickId?: string;
 };
 export type Versioned = { record: RecordData; version: string };
 export interface Store {
@@ -32,6 +34,7 @@ export interface WorkflowDeps {
     recipient: "owner" | "applicant",
   ) => Promise<string>;
   historyKey?: (currentKey: string, requestId: string) => string;
+  sourceQuickId?: string;
   now?: () => number;
 }
 export class SubmissionError extends Error {
@@ -80,6 +83,7 @@ export async function processSubmission(
       pdf,
       leaseUntil: 0,
       complete: false,
+      ...(deps.sourceQuickId ? { sourceQuickId: deps.sourceQuickId } : {}),
     });
     if (!stored) stored = await deps.store.read(key);
   }
@@ -144,6 +148,7 @@ export async function processSubmission(
         pdf,
         leaseUntil: 0,
         complete: false,
+        ...(deps.sourceQuickId ? { sourceQuickId: deps.sourceQuickId } : {}),
       },
       lease.version,
     );

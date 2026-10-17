@@ -1,8 +1,10 @@
+
 import { createHmac } from "node:crypto";
 import { getAdminSession, validAdminOrigin } from "@/lib/onboarding/admin-auth";
 import { findQuickRecord, listApplicationRecords, toApplicationSummary } from "@/lib/onboarding/records";
 import { activeInvitationStatus, issueInvitation, revokeInvitation, type InvitationPurpose } from "@/lib/onboarding/invitations";
-import { readPrivate, updatePrivate } from "@/lib/onboarding/private-store";
+import { deletePrivate, readPrivate } from "@/lib/onboarding/private-store";
+import { list as listBlobs } from "@vercel/blob";
 import type { RecordData } from "@/lib/applications/workflow";
 import { deliverScreeningRecord } from "@/lib/screening/delivery";
 import { JsonBodyError, readJsonBody } from "@/lib/http/read-json-body";
@@ -87,16 +89,83 @@ export async function POST(request: Request) {
         return Response.json({ message: "Invalid application request." }, { status: 400 });
       const located = await findQuickRecord(body.id);
       if (!located) return Response.json({ message: "Application not found." }, { status: 404 });
-      if (located.record.deletedAt)
-        return Response.json({ success: true, deleted: true }, { headers: { "Cache-Control": "no-store" } });
-      const deletedAt = new Date().toISOString();
       const current = await readPrivate<RecordData>(located.pathname);
       if (!current || current.value.id !== body.id)
         return Response.json({ message: "Application not found." }, { status: 404 });
-      const saved = await updatePrivate(located.pathname, { ...current.value, deletedAt }, current.etag);
-      if (!saved)
-        return Response.json({ message: "The application changed while being removed. Reload and retry." }, { status: 409, headers: { "Cache-Control": "no-store" } });
-      return Response.json({ success: true, deleted: true, deletedAt }, { headers: { "Cache-Control": "no-store" } });
+      const paths = new Set<string>();
+      const listPaths = async (prefix: string) => {
+        let cursor: string | undefined;
+        for (let page = 0; page < 100; page++) {
+          const result = await listBlobs({ prefix, limit: 1000, ...(cursor ? { cursor } : {}) });
+          for (const blob of result.blobs) paths.add(blob.pathname);
+          if (!result.hasMore) return;
+          cursor = result.cursor;
+        }
+        throw new Error("Linked application records exceed the deletion safety limit");
+      };
+      const quickId = body.id;
+      const screeningKey = `onboarding/screening/${quickId}.json`;
+      const screening = await readPrivate<{ quickId?: string; recordPath?: string }>(screeningKey);
+      if (screening?.value.quickId === quickId) {
+        paths.add(screeningKey);
+        if (screening.value.recordPath?.startsWith(`onboarding/screening/records/${quickId}/`)) {
+          paths.add(screening.value.recordPath);
+          await listPaths(`onboarding/screening/records/${quickId}/`);
+        }
+      }
+
+      for (const purpose of ["screening", "full"] as const)
+        paths.add(`onboarding/active-invitations/${purpose}/${quickId}.json`);
+
+      await listPaths("onboarding/invitations/");
+      const inviteHashes = new Set<string>();
+      for (const pathname of [...paths].filter((path) => path.startsWith("onboarding/invitations/"))) {
+        const invitation = await readPrivate<{ quickId?: string; tokenHash?: string; purpose?: string }>(pathname);
+        if (invitation?.value.quickId === quickId) {
+          paths.add(pathname);
+          if (invitation.value.tokenHash) inviteHashes.add(invitation.value.tokenHash);
+        } else {
+          paths.delete(pathname);
+        }
+      }
+
+      paths.add(`onboarding/full-drafts/${quickId}.json`);
+      await listPaths(`onboarding/full-revisions/${quickId}/`);
+
+      const emailHash = createHmac("sha256", process.env.APPLICATION_KEY_SECRET || "")
+        .update(current.value.payload.email)
+        .digest("hex");
+      const fullPath = `applications/full/${emailHash}.json`;
+      const full = process.env.APPLICATION_KEY_SECRET
+        ? await readPrivate<RecordData>(fullPath)
+        : null;
+      if (full?.value.sourceQuickId === quickId) paths.add(fullPath);
+
+      if (inviteHashes.size) {
+        for (const prefix of ["onboarding/full-otp/", "onboarding/full-sessions/"]) {
+          await listPaths(prefix);
+          for (const pathname of [...paths].filter((path) => path.startsWith(prefix))) {
+            const related = await readPrivate<{ inviteHash?: string }>(pathname);
+            if (related?.value.inviteHash && inviteHashes.has(related.value.inviteHash))
+              paths.add(pathname);
+            else paths.delete(pathname);
+          }
+        }
+      }
+
+      const emailFile = located.pathname.split("/").at(-1);
+      if (emailFile) {
+        const prefix = `applications/quick/history/${emailFile.replace(/\.json$/, "")}/`;
+        await listPaths(prefix);
+        for (const pathname of [...paths].filter((path) => path.startsWith(prefix))) {
+          const archived = await readPrivate<RecordData>(pathname);
+          if (archived?.value.id !== quickId) paths.delete(pathname);
+        }
+      }
+
+      paths.add(located.pathname);
+      for (const pathname of paths) await deletePrivate(pathname);
+      return Response.json({ success: true, deleted: true }, { headers: { "Cache-Control": "no-store" } });
     }
     if (body?.action === "revoke-invitation") {
       const purposeValue = body.purpose;
