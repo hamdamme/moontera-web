@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { getScreeningDisclosures } from "@/lib/screening/disclosures";
 import { createScreeningPdf, type ScreeningPdfData } from "@/lib/screening/pdf";
-import { deliverScreeningRecord, type ScreeningRecord } from "@/lib/screening/delivery";
+import { deliverScreeningRecord, ScreeningDeliveryError, type ScreeningRecord } from "@/lib/screening/delivery";
 import { readActiveInvitation } from "@/lib/onboarding/invitations";
 import { readPrivate, createPrivate, updatePrivate } from "@/lib/onboarding/private-store";
 import { validAdminOrigin } from "@/lib/onboarding/admin-auth";
@@ -136,11 +136,21 @@ export async function POST(request: Request) {
     }
     const delivered = await deliverScreeningRecord(recordPath);
     return Response.json(
-      { success: true, id: delivered.id, alreadySubmitted: !!stored.value.ownerEmailId && !!stored.value.applicantEmailId },
+      { success: true, id: delivered.id, alreadySubmitted: !!delivered.ownerEmailId && !!delivered.applicantEmailId },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
-    console.error("Screening submission failed", error instanceof Error ? error.name : "Unknown error");
+    const providerError = error instanceof ScreeningDeliveryError ? error.providerError : undefined;
+    const providerMessage = providerError && typeof providerError === "object" && "message" in providerError && typeof providerError.message === "string"
+      ? providerError.message.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[email]").slice(0, 180)
+      : "";
+    console.error("Screening submission failed", error instanceof ScreeningDeliveryError ? error.stage : error instanceof Error ? error.name : "Unknown error", providerMessage);
+    if (error instanceof ScreeningDeliveryError && error.stage === "moontera")
+      return fail("Your signed consent is saved, but the PDF email to Moontera could not be sent yet. Tap Retry submission; your consent is saved and will not be duplicated.", 503);
+    if (error instanceof ScreeningDeliveryError && error.stage === "applicant")
+      return fail("Moontera has your signed consent. The confirmation email to you is still pending; tap Retry submission to finish delivery.", 503);
+    if (error instanceof ScreeningDeliveryError && error.stage === "storage")
+      return fail("Your signed consent is saved, but delivery status could not be confirmed. Tap Retry submission to finish safely.", 503);
     if (error instanceof Error && error.message.includes("manual owner attention"))
       return fail("This saved consent needs delivery review. Contact info@moonterallc.com and do not submit a new Screening form.", 503);
     if (error instanceof Error && error.message.includes("Moontera screening email delivery failed"))

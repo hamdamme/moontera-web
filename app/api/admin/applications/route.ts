@@ -8,6 +8,10 @@ import { list as listBlobs } from "@vercel/blob";
 import type { RecordData } from "@/lib/applications/workflow";
 import { deliverScreeningRecord } from "@/lib/screening/delivery";
 import { JsonBodyError, readJsonBody } from "@/lib/http/read-json-body";
+import { ensurePolicyInvitation, policyConsentPath, policyInvitePath } from "@/lib/onboarding/policy-consents";
+import { applicationBaseUrl } from "@/lib/onboarding/urls";
+import { Resend } from "resend";
+import { deliverPolicyConsent } from "@/lib/applications/policy-delivery";
 
 export const runtime = "nodejs";
 
@@ -35,6 +39,9 @@ export async function GET(request: Request) {
           ? `applications/full/${createHmac("sha256", process.env.APPLICATION_KEY_SECRET).update(record.payload.email).digest("hex")}.json`
           : "";
         const fullRecord = fullKey ? await readPrivate<RecordData>(fullKey) : null;
+        const policyConsent = fullRecord?.value.complete && fullRecord.value.payload.kind === "full"
+          ? await readPrivate<{ submittedAt?: string; ownerEmailId?: string; applicantEmailId?: string }>(policyConsentPath(record.id, fullRecord.value.id))
+          : null;
         const fullRevision = await readPrivate<{ latestRevision?: number }>(`onboarding/full-revisions/${record.id}/index.json`);
         const fullDraft = await readPrivate<{ quickId?: string }>(`onboarding/full-drafts/${record.id}.json`);
         return {
@@ -48,6 +55,9 @@ export async function GET(request: Request) {
           fullStarted: fullDraft?.value.quickId === record.id,
           fullApplicationId: fullRecord?.value.payload.kind === "full" ? fullRecord.value.id : null,
           fullRevisionNumber: fullRevision?.value.latestRevision || 0,
+          policiesSignedAt: policyConsent?.value.submittedAt || null,
+          policiesOwnerEmailSent: !!policyConsent?.value.ownerEmailId,
+          policiesApplicantEmailSent: !!policyConsent?.value.applicantEmailId,
         };
       }),
     );
@@ -71,6 +81,42 @@ export async function POST(request: Request) {
     if (!(await getAdminSession(request)))
       return Response.json({ message: "Sign in required." }, { status: 401, headers: { "Cache-Control": "no-store" } });
     const body = await readJsonBody(request, 8192);
+    if (body?.action === "retry-policy-email") {
+      if (typeof body.id !== "string" || !/^[a-f0-9-]{36}$/i.test(body.id) || typeof body.fullId !== "string" || !/^[a-f0-9-]{36}$/i.test(body.fullId))
+        return Response.json({ message: "Select the signed Full Application." }, { status: 400 });
+      const path = policyConsentPath(body.id, body.fullId);
+      if (!(await readPrivate(path))) return Response.json({ message: "There is no signed policy packet to deliver." }, { status: 404 });
+      try {
+        const delivered = await deliverPolicyConsent(path);
+        return Response.json({ success: true, ownerEmailSent: !!delivered.ownerEmailId, applicantEmailSent: !!delivered.applicantEmailId }, { headers: { "Cache-Control": "no-store" } });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Signed policy email delivery failed.";
+        return Response.json({ message }, { status: 503, headers: { "Cache-Control": "no-store" } });
+      }
+    }
+    if (body?.action === "send-policy-invitation") {
+      if (typeof body.id !== "string" || !/^[a-f0-9-]{36}$/i.test(body.id) || typeof body.fullId !== "string" || !/^[a-f0-9-]{36}$/i.test(body.fullId))
+        return Response.json({ message: "Select the completed Full Application." }, { status: 400 });
+      if (!process.env.APPLICATION_KEY_SECRET || !process.env.RESEND_API_KEY)
+        return Response.json({ message: "Policy email is temporarily unavailable." }, { status: 503 });
+      const quick = await findQuickRecord(body.id);
+      if (!quick?.record.complete) return Response.json({ message: "Quick Application not found." }, { status: 404 });
+      const emailHash = createHmac("sha256", process.env.APPLICATION_KEY_SECRET).update(quick.record.payload.email).digest("hex");
+      const full = await readPrivate<RecordData>(`applications/full/${emailHash}.json`);
+      if (!full || full.value.id !== body.fullId || full.value.deletedAt || !full.value.complete || full.value.sourceQuickId !== quick.record.id)
+        return Response.json({ message: "The selected completed Full Application was not found." }, { status: 404 });
+      const token = await ensurePolicyInvitation(full.value.id, quick.record.id, full.value.payload.email);
+      const href = `${applicationBaseUrl()}/apply/documents#quickId=${encodeURIComponent(quick.record.id)}&fullId=${encodeURIComponent(full.value.id)}&token=${token}`;
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const from = process.env.APPLICATION_FROM || "Moontera LLC <info@moonterallc.com>";
+      const { data, error } = await resend.emails.send({
+        from, to: [full.value.payload.email], replyTo: "info@moonterallc.com",
+        subject: "Moontera LLC - review and sign driver policies",
+        text: `Hello ${full.value.payload.name},\n\nPlease read and acknowledge the three Moontera driver policies using this secure link. It expires in 14 days.\n\n${href}\n\nAfter you finish, you and Moontera will each receive the signed PDF showing your name and signing date.\n\nQuestions? Contact info@moonterallc.com or 773-882-5595.\n\nMoontera LLC`,
+      }, { idempotencyKey: `policy-invitation/${full.value.id}/${token}` });
+      if (error || !data?.id) return Response.json({ message: "The policy link could not be emailed. Retry shortly." }, { status: 503 });
+      return Response.json({ success: true, email: full.value.payload.email }, { headers: { "Cache-Control": "no-store" } });
+    }
     if (body?.action === "retry-screening-email") {
       if (typeof body.id !== "string" || !/^[a-f0-9-]{36}$/i.test(body.id))
         return Response.json({ message: "Invalid application request." }, { status: 400 });
@@ -160,6 +206,8 @@ export async function POST(request: Request) {
             if (!full || full.value.id !== fullId || full.value.payload.kind !== "full")
               return Response.json({ message: "The selected Full Application was not found." }, { status: 404 });
             paths.add(fullPath);
+            for (const linkedPath of [policyInvitePath(fullId), policyConsentPath(quickId, fullId)])
+              if (await readPrivate(linkedPath)) paths.add(linkedPath);
           }
           const draftPath = `onboarding/full-drafts/${quickId}.json`;
           if (await readPrivate(draftPath)) paths.add(draftPath);

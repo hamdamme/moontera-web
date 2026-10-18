@@ -51,7 +51,7 @@ const { JsonBodyError, readJsonBody } = require(
 const { createSubmissionPdf } = require(
   path.join(tmp, "lib/applications/submission-pdf.js"),
 );
-const { createPolicyPacketPdf } = require(
+const { createPolicyPacketPdf, createSignedPolicyPacketPdf } = require(
   path.join(tmp, "lib/applications/policies-pdf.js"),
 );
 const { createScreeningPdf } = require(path.join(tmp, "lib/screening/pdf.js"));
@@ -492,6 +492,16 @@ const deps = {
   const policyPdf = await createPolicyPacketPdf(font);
   const policyDocument = await require("pdf-lib").PDFDocument.load(policyPdf);
   assert(policyPdf.length > 1000 && policyDocument.getPageCount() >= 3);
+  const signedPolicyPdf = await createSignedPolicyPacketPdf(font, {
+    name: "Alex Jordan Example",
+    email: "alex@example.com",
+    signedAt: "2026-10-17T15:30:00.000Z",
+    reference: "SAMPLE-POLICY-SIGNATURE",
+  });
+  const signedPolicyDocument = await require("pdf-lib").PDFDocument.load(signedPolicyPdf);
+  assert(signedPolicyDocument.getTitle().includes("Alex Jordan Example"));
+  assert(signedPolicyDocument.getPageCount() >= policyDocument.getPageCount());
+  fs.writeFileSync(path.join(out, "Moontera-signed-policy-sample.pdf"), signedPolicyPdf);
   const legalDocs = require(path.join(root, "app/apply/documents/documents.json"));
   const screeningPdf = await createScreeningPdf({
     id: "SAMPLE-SCREENING-ONLY",
@@ -514,6 +524,6 @@ const deps = {
   fs.writeFileSync(path.join(out, "Moontera-screening-sample.pdf"), screeningPdf);
   assert(screeningPdf.length > 1000 && revisedPdf.length > 1000);
   console.log(
-    "PASS: bounded JSON bodies, validation, request origins, missing groups, date checks, email normalization, screening release gate, draft retention deadlines, concurrent duplicate prevention, repeat requests, partial email retry, timeout cutoff, and formatted application, screening, and policy PDFs.",
+    "PASS: bounded JSON bodies, validation, request origins, missing groups, date checks, email normalization, screening release gate, draft retention deadlines, concurrent duplicate prevention, repeat requests, partial email retry, timeout cutoff, and formatted application, screening, unsigned policy, and signed policy PDFs.",
   );
 })().finally(() => fs.rmSync(tmp, { recursive: true, force: true }));
