@@ -24,6 +24,9 @@ type ApplicationSummary = {
   fullStarted?: boolean;
   fullApplicationId?: string | null;
   fullRevisionNumber?: number;
+  policiesSignedAt?: string | null;
+  policiesOwnerEmailSent?: boolean;
+  policiesApplicantEmailSent?: boolean;
 };
 type ApplicationDetail = {
   id: string;
@@ -206,6 +209,45 @@ export default function AdminDashboard() {
     }
   }
 
+  async function sendPolicyInvitation(quickId: string, fullId: string) {
+    setBusy(true);
+    setNotice("");
+    try {
+      const response = await fetch("/api/admin/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "send-policy-invitation", id: quickId, fullId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Policy link could not be sent.");
+      setNotice(`Secure policy link sent to ${result.email}.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Policy link could not be sent.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function retryPolicyEmail(quickId: string, fullId: string) {
+    setBusy(true);
+    setNotice("");
+    try {
+      const response = await fetch("/api/admin/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "retry-policy-email", id: quickId, fullId }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Signed policy email delivery failed.");
+      setNotice("Signed policy PDF copies were delivered to Moontera and the driver.");
+      await loadApplications();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Signed policy email delivery failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function logout() {
     await fetch("/api/admin/auth/logout", { method: "POST" });
     setAuthenticated(false);
@@ -277,11 +319,14 @@ export default function AdminDashboard() {
                     <td><strong>{application.name}</strong><span>{application.email}</span></td>
                     <td>{application.position || "-"}{application.state ? ` · ${application.state}` : ""}</td>
                     <td>{new Date(application.createdAt).toLocaleDateString()}</td>
-                    <td>{application.complete ? `Quick received${application.screeningSigned ? ` · Screening signed${application.screeningOwnerEmailSent ? " · Moontera email sent" : " · Moontera email pending"}${application.screeningApplicantEmailSent ? " · Driver email sent" : ""}` : application.screeningInviteExpiresAt ? " · Screening invited" : ""}${application.fullReceived ? ` · Full received${application.fullRevisionNumber ? ` (Rev. ${application.fullRevisionNumber})` : ""}` : application.fullInviteExpiresAt ? " · Full invited" : ""}` : "Email delivery pending"}</td>
+                    <td>{application.complete ? `Quick received${application.screeningSigned ? ` · Screening signed${application.screeningOwnerEmailSent ? " · Moontera email sent" : " · Moontera email pending"}${application.screeningApplicantEmailSent ? " · Driver email sent" : ""}` : application.screeningInviteExpiresAt ? " · Screening invited" : ""}${application.fullReceived ? ` · Full received${application.fullRevisionNumber ? ` (Rev. ${application.fullRevisionNumber})` : ""}${application.policiesSignedAt ? ` · Policies signed${application.policiesOwnerEmailSent ? " · Moontera PDF sent" : " · Moontera PDF pending"}${application.policiesApplicantEmailSent ? " · Driver PDF sent" : ""}` : ""}` : application.fullInviteExpiresAt ? " · Full invited" : ""}` : "Email delivery pending"}</td>
                     <td className="admin-next-step">
                       {application.screeningInviteExpiresAt && <small>Screening expires {new Date(application.screeningInviteExpiresAt).toLocaleDateString()}</small>}
                       {application.screeningInviteExpiresAt && <button className="admin-link-button" type="button" disabled={busy} onClick={() => revokeInvitation(application.id, "screening")}>Revoke Screening</button>}
                       {application.screeningSigned && !application.screeningOwnerEmailSent && <button className="admin-secondary" type="button" disabled={busy} onClick={() => retryScreeningEmail(application.id)}>Retry screening email</button>}
+                      {application.fullReceived && application.fullApplicationId && !application.policiesSignedAt && <button className="admin-secondary" type="button" disabled={busy} onClick={() => sendPolicyInvitation(application.id, application.fullApplicationId!)}>Send policy link</button>}
+                      {application.policiesSignedAt && (!application.policiesOwnerEmailSent || !application.policiesApplicantEmailSent) && <small>Signed policy PDF email pending</small>}
+                      {application.policiesSignedAt && application.fullApplicationId && (!application.policiesOwnerEmailSent || !application.policiesApplicantEmailSent) && <button className="admin-secondary" type="button" disabled={busy} onClick={() => retryPolicyEmail(application.id, application.fullApplicationId!)}>Retry policy email</button>}
                       {application.fullInviteExpiresAt && <small>Full invite expires {new Date(application.fullInviteExpiresAt).toLocaleDateString()}</small>}
                       {application.fullInviteExpiresAt && <button className="admin-link-button" type="button" disabled={busy} onClick={() => revokeInvitation(application.id, "full")}>Revoke Full</button>}
                       <button className="admin-secondary" type="button" disabled={busy || !application.complete} onClick={() => sendInvitation(application.id, "screening")}>Screening</button>

@@ -13,6 +13,13 @@ export type ScreeningRecord = ScreeningPdfData & {
   applicantEmailId?: string;
 };
 
+export class ScreeningDeliveryError extends Error {
+  constructor(readonly stage: "moontera" | "applicant" | "storage", readonly providerError?: unknown) {
+    super(`Screening delivery failed at ${stage}`);
+    this.name = "ScreeningDeliveryError";
+  }
+}
+
 export async function deliverScreeningRecord(recordPath: string) {
   if (!process.env.RESEND_API_KEY) throw new Error("Screening email delivery is not configured");
   const stored = await readPrivate<ScreeningRecord>(recordPath);
@@ -39,7 +46,7 @@ export async function deliverScreeningRecord(recordPath: string) {
       },
       { idempotencyKey: `screening/${record.id}/${recipient}` },
     );
-    if (error || !data?.id) throw new Error(`${owner ? "Moontera" : "Driver"} screening email delivery failed`);
+    if (error || !data?.id) throw new ScreeningDeliveryError(owner ? "moontera" : "applicant", error || undefined);
     return data.id;
   };
 
@@ -48,7 +55,7 @@ export async function deliverScreeningRecord(recordPath: string) {
   if (!current.attemptStartedAt) {
     const attemptStartedAt = Date.now();
     const next = await updatePrivate(recordPath, { ...current, attemptStartedAt }, etag);
-    if (!next) throw new Error("Screening email state changed");
+    if (!next) throw new ScreeningDeliveryError("storage");
     current = { ...current, attemptStartedAt };
     etag = next;
   } else if (
@@ -60,14 +67,14 @@ export async function deliverScreeningRecord(recordPath: string) {
   if (!current.ownerEmailId) {
     const id = await send("owner");
     const next = await updatePrivate(recordPath, { ...current, ownerEmailId: id }, etag);
-    if (!next) throw new Error("Screening email state changed");
+    if (!next) throw new ScreeningDeliveryError("storage");
     current = { ...current, ownerEmailId: id };
     etag = next;
   }
   if (!current.applicantEmailId) {
     const id = await send("applicant");
     const next = await updatePrivate(recordPath, { ...current, applicantEmailId: id }, etag);
-    if (!next) throw new Error("Screening email state changed");
+    if (!next) throw new ScreeningDeliveryError("storage");
     current = { ...current, applicantEmailId: id };
   }
   return current;
