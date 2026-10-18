@@ -36,6 +36,7 @@ export async function GET(request: Request) {
           : "";
         const fullRecord = fullKey ? await readPrivate<RecordData>(fullKey) : null;
         const fullRevision = await readPrivate<{ latestRevision?: number }>(`onboarding/full-revisions/${record.id}/index.json`);
+        const fullDraft = await readPrivate<{ quickId?: string }>(`onboarding/full-drafts/${record.id}.json`);
         return {
           ...toApplicationSummary(record),
           screeningSigned: !!screening?.value.signedAt,
@@ -44,6 +45,8 @@ export async function GET(request: Request) {
           screeningInviteExpiresAt: screeningInvite?.expiresAt || null,
           fullInviteExpiresAt: fullInvite?.expiresAt || null,
           fullReceived: !!fullRecord?.value.complete && fullRecord.value.payload.kind === "full",
+          fullStarted: fullDraft?.value.quickId === record.id,
+          fullApplicationId: fullRecord?.value.payload.kind === "full" ? fullRecord.value.id : null,
           fullRevisionNumber: fullRevision?.value.latestRevision || 0,
         };
       }),
@@ -87,6 +90,9 @@ export async function POST(request: Request) {
     if (body?.action === "delete") {
       if (typeof body.id !== "string" || !/^[a-f0-9-]{36}$/i.test(body.id))
         return Response.json({ message: "Invalid application request." }, { status: 400 });
+      const recordType = body.recordType;
+      if (!["quick", "screening", "full"].includes(recordType as string))
+        return Response.json({ message: "Choose Quick, Screening, or Full Application." }, { status: 400 });
       const located = await findQuickRecord(body.id);
       if (!located) return Response.json({ message: "Application not found." }, { status: 404 });
       const current = await readPrivate<RecordData>(located.pathname);
@@ -94,76 +100,80 @@ export async function POST(request: Request) {
         return Response.json({ message: "Application not found." }, { status: 404 });
       const paths = new Set<string>();
       const listPaths = async (prefix: string) => {
+        const matches: string[] = [];
         let cursor: string | undefined;
         for (let page = 0; page < 100; page++) {
           const result = await listBlobs({ prefix, limit: 1000, ...(cursor ? { cursor } : {}) });
-          for (const blob of result.blobs) paths.add(blob.pathname);
-          if (!result.hasMore) return;
+          for (const blob of result.blobs) matches.push(blob.pathname);
+          if (!result.hasMore) return matches;
           cursor = result.cursor;
         }
         throw new Error("Linked application records exceed the deletion safety limit");
       };
       const quickId = body.id;
-      const screeningKey = `onboarding/screening/${quickId}.json`;
-      const screening = await readPrivate<{ quickId?: string; recordPath?: string }>(screeningKey);
-      if (screening?.value.quickId === quickId) {
-        paths.add(screeningKey);
-        if (screening.value.recordPath?.startsWith(`onboarding/screening/records/${quickId}/`)) {
-          paths.add(screening.value.recordPath);
-          await listPaths(`onboarding/screening/records/${quickId}/`);
-        }
-      }
-
-      for (const purpose of ["screening", "full"] as const)
-        paths.add(`onboarding/active-invitations/${purpose}/${quickId}.json`);
-
-      await listPaths("onboarding/invitations/");
-      const inviteHashes = new Set<string>();
-      for (const pathname of [...paths].filter((path) => path.startsWith("onboarding/invitations/"))) {
-        const invitation = await readPrivate<{ quickId?: string; tokenHash?: string; purpose?: string }>(pathname);
-        if (invitation?.value.quickId === quickId) {
-          paths.add(pathname);
-          if (invitation.value.tokenHash) inviteHashes.add(invitation.value.tokenHash);
-        } else {
-          paths.delete(pathname);
-        }
-      }
-
-      paths.add(`onboarding/full-drafts/${quickId}.json`);
-      await listPaths(`onboarding/full-revisions/${quickId}/`);
-
-      const emailHash = createHmac("sha256", process.env.APPLICATION_KEY_SECRET || "")
-        .update(current.value.payload.email)
-        .digest("hex");
-      const fullPath = `applications/full/${emailHash}.json`;
-      const full = process.env.APPLICATION_KEY_SECRET
-        ? await readPrivate<RecordData>(fullPath)
-        : null;
-      if (full?.value.sourceQuickId === quickId) paths.add(fullPath);
-
-      if (inviteHashes.size) {
-        for (const prefix of ["onboarding/full-otp/", "onboarding/full-sessions/"]) {
-          await listPaths(prefix);
-          for (const pathname of [...paths].filter((path) => path.startsWith(prefix))) {
-            const related = await readPrivate<{ inviteHash?: string }>(pathname);
-            if (related?.value.inviteHash && inviteHashes.has(related.value.inviteHash))
-              paths.add(pathname);
-            else paths.delete(pathname);
+      if (recordType === "quick") {
+        paths.add(located.pathname);
+        const emailFile = located.pathname.split("/").at(-1);
+        if (emailFile) {
+          const prefix = `applications/quick/history/${emailFile.replace(/\.json$/, "")}/`;
+          for (const pathname of await listPaths(prefix)) {
+            const archived = await readPrivate<RecordData>(pathname);
+            if (archived?.value.id === quickId) paths.add(pathname);
           }
         }
       }
-
-      const emailFile = located.pathname.split("/").at(-1);
-      if (emailFile) {
-        const prefix = `applications/quick/history/${emailFile.replace(/\.json$/, "")}/`;
-        await listPaths(prefix);
-        for (const pathname of [...paths].filter((path) => path.startsWith(prefix))) {
-          const archived = await readPrivate<RecordData>(pathname);
-          if (archived?.value.id !== quickId) paths.delete(pathname);
+      const inviteHashes = new Set<string>();
+      if (recordType === "screening" || recordType === "full") {
+        const purpose = recordType;
+        const invitationPaths = await listPaths("onboarding/invitations/");
+        const invitations = await Promise.all(invitationPaths.map(async (pathname) => ({
+          pathname,
+          stored: await readPrivate<{ quickId?: string; tokenHash?: string; purpose?: string }>(pathname),
+        })));
+        for (const { pathname, stored } of invitations) {
+          const invitation = stored?.value;
+          if (invitation?.quickId === quickId && invitation.purpose === purpose) {
+            paths.add(pathname);
+            if (invitation.tokenHash) inviteHashes.add(invitation.tokenHash);
+          }
+        }
+        const activePath = `onboarding/active-invitations/${purpose}/${quickId}.json`;
+        if (await readPrivate(activePath)) paths.add(activePath);
+        if (purpose === "screening") {
+          const screeningPath = `onboarding/screening/${quickId}.json`;
+          const screening = await readPrivate<{ quickId?: string }>(screeningPath);
+          if (screening?.value.quickId === quickId) paths.add(screeningPath);
+          for (const pathname of await listPaths(`onboarding/screening/records/${quickId}/`))
+            paths.add(pathname);
+        } else {
+          const fullId = body.fullId;
+          if (fullId !== null && fullId !== undefined && (typeof fullId !== "string" || !/^[a-f0-9-]{36}$/i.test(fullId)))
+            return Response.json({ message: "Select the Full Application you want to delete." }, { status: 400 });
+          if (fullId) {
+            if (!process.env.APPLICATION_KEY_SECRET)
+              return Response.json({ message: "Full Application storage is unavailable." }, { status: 503 });
+            const emailHash = createHmac("sha256", process.env.APPLICATION_KEY_SECRET)
+              .update(current.value.payload.email)
+              .digest("hex");
+            const fullPath = `applications/full/${emailHash}.json`;
+            const full = await readPrivate<RecordData>(fullPath);
+            if (!full || full.value.id !== fullId || full.value.payload.kind !== "full")
+              return Response.json({ message: "The selected Full Application was not found." }, { status: 404 });
+            paths.add(fullPath);
+          }
+          const draftPath = `onboarding/full-drafts/${quickId}.json`;
+          if (await readPrivate(draftPath)) paths.add(draftPath);
+          for (const pathname of await listPaths(`onboarding/full-revisions/${quickId}/`))
+            paths.add(pathname);
+          for (const prefix of ["onboarding/full-otp/", "onboarding/full-sessions/"]) {
+            for (const pathname of await listPaths(prefix)) {
+              const related = await readPrivate<{ inviteHash?: string }>(pathname);
+              if (related?.value.inviteHash && inviteHashes.has(related.value.inviteHash))
+                paths.add(pathname);
+            }
+          }
         }
       }
-
-      paths.add(located.pathname);
       for (const pathname of paths) await deletePrivate(pathname);
       return Response.json({ success: true, deleted: true }, { headers: { "Cache-Control": "no-store" } });
     }

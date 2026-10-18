@@ -21,6 +21,8 @@ type ApplicationSummary = {
   screeningInviteExpiresAt?: number | null;
   fullInviteExpiresAt?: number | null;
   fullReceived?: boolean;
+  fullStarted?: boolean;
+  fullApplicationId?: string | null;
   fullRevisionNumber?: number;
 };
 type ApplicationDetail = {
@@ -156,21 +158,27 @@ export default function AdminDashboard() {
     }
   }
 
-  async function deleteApplication(id: string, name: string) {
-    if (!window.confirm(`Permanently delete ${name}'s application and its linked screening, invitation, and draft records? This cannot be undone.`)) return;
+  async function deleteApplication(id: string, name: string, recordType: "quick" | "screening" | "full", fullId?: string | null) {
+    const label = recordType === "quick" ? "Quick Application" : recordType === "screening" ? "Screening consent" : "Full Application";
+    if (!window.confirm(`Permanently delete ${name}'s ${label} only? This cannot be undone.`)) return;
     setBusy(true);
     setNotice("");
     try {
       const response = await fetch("/api/admin/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "delete", id }),
+        body: JSON.stringify({ action: "delete", id, recordType, fullId }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Application could not be removed.");
-      setApplications((current) => current.filter((application) => application.id !== id));
-      if (selected?.id === id) setSelected(null);
-      setNotice("Application and linked records permanently deleted.");
+      if (recordType === "quick") {
+        setApplications((current) => current.filter((application) => application.id !== id));
+        if (selected?.id === id) setSelected(null);
+      } else {
+        if (selected?.id === id) setSelected(null);
+        await loadApplications();
+      }
+      setNotice(`${label} deleted.`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Application could not be removed.");
     } finally {
@@ -250,7 +258,7 @@ export default function AdminDashboard() {
       </header>
       <section className="admin-card">
         <div className="admin-list-heading">
-          <div><h2>Quick Applications</h2><p>New applications are reviewed here before you invite a driver to the next step.</p></div>
+          <div><h2>Quick Applications</h2><p>Delete Quick, Screening, or Full records independently. Delete Screening or Full first if you need to keep managing those records after removing the Quick Application.</p></div>
           <input
             aria-label="Search applications"
             placeholder="Search name or email"
@@ -279,7 +287,7 @@ export default function AdminDashboard() {
                       <button className="admin-secondary" type="button" disabled={busy || !application.complete} onClick={() => sendInvitation(application.id, "screening")}>Screening</button>
                       <button className="admin-secondary" type="button" disabled={busy || !application.screeningSigned} title={application.screeningSigned ? "" : "A signed Screening record is required first"} onClick={() => sendInvitation(application.id, "full")}>Full application</button>
                     </td>
-                    <td><div className="admin-row-actions"><button className="admin-secondary" type="button" disabled={busy} onClick={() => openApplication(application.id)}>View</button><button className="admin-secondary" type="button" disabled={busy} onClick={() => deleteApplication(application.id, application.name)}>Delete</button></div></td>
+                    <td><div className="admin-row-actions"><button className="admin-secondary" type="button" disabled={busy} onClick={() => openApplication(application.id)}>View</button><button className="admin-secondary" type="button" disabled={busy} onClick={() => deleteApplication(application.id, application.name, "quick")}>Delete Quick</button><button className="admin-secondary" type="button" disabled={busy || (!application.screeningSigned && !application.screeningInviteExpiresAt)} onClick={() => deleteApplication(application.id, application.name, "screening")} title={application.screeningSigned || application.screeningInviteExpiresAt ? "" : "No Screening record or invitation is available"}>Delete Screening</button><button className="admin-secondary" type="button" disabled={busy || (!application.fullReceived && !application.fullStarted && !application.fullInviteExpiresAt)} onClick={() => deleteApplication(application.id, application.name, "full", application.fullApplicationId)} title={application.fullReceived || application.fullStarted || application.fullInviteExpiresAt ? "" : "No Full Application record or invitation is available"}>Delete Full</button></div></td>
                   </tr>
                 ))}
               </tbody>
